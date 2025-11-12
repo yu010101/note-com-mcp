@@ -7,10 +7,21 @@ import http from "http";
 import { env, authStatus } from "./config/environment.js";
 import { loginToNote } from "./utils/auth.js";
 import { noteApiRequest } from "./utils/api-client.js";
+import { buildAuthHeaders, hasAuth } from "./utils/auth.js";
 
 // ツールとプロンプトの登録
 import { registerAllTools } from "./tools/index.js";
 import { registerPrompts } from "./prompts/prompts.js";
+
+// 下書き保存用のカスタムヘッダーを構築
+function buildCustomHeaders(): { [key: string]: string } {
+  const headers = buildAuthHeaders();
+  headers["content-type"] = "application/json";
+  headers["origin"] = "https://editor.note.com";
+  headers["referer"] = "https://editor.note.com/";
+  headers["x-requested-with"] = "XMLHttpRequest";
+  return headers;
+}
 
 // MCPセッション管理
 const sessions = new Map<string, any>();
@@ -98,9 +109,25 @@ async function getToolsList() {
         properties: {
           title: { type: "string", description: "記事タイトル" },
           body: { type: "string", description: "記事本文" },
-          isPublic: { type: "boolean", description: "公開設定", default: false }
+          tags: { type: "array", items: { type: "string" }, description: "タグ（最大10個）" },
+          id: { type: "string", description: "既存の下書きID（更新する場合）" }
         },
         required: ["title", "body"]
+      }
+    },
+    {
+      name: "edit-note",
+      description: "既存の記事を編集する",
+      inputSchema: {
+        type: "object",
+        properties: {
+          id: { type: "string", description: "記事ID" },
+          title: { type: "string", description: "記事タイトル" },
+          body: { type: "string", description: "記事本文" },
+          tags: { type: "array", items: { type: "string" }, description: "タグ（最大10個）" },
+          isDraft: { type: "boolean", description: "下書き状態", default: true }
+        },
+        required: ["id", "title", "body"]
       }
     },
     {
@@ -747,19 +774,87 @@ async function startServer(): Promise<void> {
                     };
                     
                   } else if (name === "post-draft-note") {
-                    // post-draft-noteツールの実装
-                    const { title, body, isPublic = false } = args;
+                    // post-draft-noteツールの実装（11月8日成功版：2段階プロセス）
+                    let { title, body, tags = [], id } = args;
                     
-                    // 簡素化されたリクエストデータ
-                    const postData = {
-                      title: title,
+                    // 新規作成の場合、まず空の下書きを作成
+                    if (!id) {
+                      console.error("新規下書きを作成します...");
+                      
+                      const createData = {
+                        body: "<p></p>",
+                        body_length: 0,
+                        name: title || "無題",
+                        index: false,
+                        is_lead_form: false
+                      };
+                      
+                      const headers = buildCustomHeaders();
+                      
+                      const createResult = await noteApiRequest(
+                        "/v1/text_notes",
+                        "POST",
+                        createData,
+                        true,
+                        headers
+                      );
+                      
+                      if (createResult.data?.id) {
+                        id = createResult.data.id.toString();
+                        console.error(`下書き作成成功: ID=${id}`);
+                      } else {
+                        throw new Error("下書きの作成に失敗しました");
+                      }
+                    }
+                    
+                    // 下書きを更新
+                    console.error(`下書きを更新します (ID: ${id})`);
+                    
+                    const updateData = {
                       body: body,
-                      tags: []
+                      body_length: body.length,
+                      name: title || "無題",
+                      index: false,
+                      is_lead_form: false
+                    };
+                    
+                    const headers = await buildCustomHeaders();
+                    
+                    const data = await noteApiRequest(
+                      `/v1/text_notes/draft_save?id=${id}&is_temp_saved=true`,
+                      "POST",
+                      updateData,
+                      true,
+                      headers
+                    );
+                    
+                    result = {
+                      content: [{
+                        type: "text",
+                        text: JSON.stringify({
+                          success: true,
+                          message: "記事を下書き保存しました",
+                          noteId: id,
+                          editUrl: `https://editor.note.com/notes/${id}`,
+                          data: data
+                        }, null, 2)
+                      }]
+                    };
+                    
+                  } else if (name === "edit-note") {
+                    // edit-noteツールの実装（参考: https://note.com/taku_sid/n/n1b1b7894e28f）
+                    const { id, title, body, tags = [], isDraft = true } = args;
+                    
+                    // 参照記事に基づく正しいパラメータ形式
+                    const postData = {
+                      name: title,  // 'title'ではなく'name'
+                      body: body,
+                      status: isDraft ? "draft" : "published"
                     };
                     
                     const data = await noteApiRequest(
-                      `/v1/text_notes/draft_save?user_id=***USERNAME_REMOVED***`, 
-                      "POST", 
+                      `/v1/text_notes/${id}`, 
+                      "PUT", 
                       postData, 
                       true
                     );
@@ -767,7 +862,11 @@ async function startServer(): Promise<void> {
                     result = {
                       content: [{
                         type: "text",
-                        text: JSON.stringify(data, null, 2)
+                        text: JSON.stringify({
+                          success: true,
+                          message: "記事を更新しました",
+                          data: data
+                        }, null, 2)
                       }]
                     };
                     

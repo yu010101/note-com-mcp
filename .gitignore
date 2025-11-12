@@ -28,6 +28,14 @@ Thumbs.db
 *-draft.md
 test-*.md
 
+# 個人的な開発記録（公開しない）
+docs/DRAFT_CREATION_SUCCESS_STORY.md
+
+# 個人的な設定ファイル（ユーザー名を含む）
+scripts/cloudflare-tunnel.service
+scripts/monitor-services.sh
+scripts/setup-cloudflare-tunnel.sh
+
 # クライアントコード（開発中）
 client/
 

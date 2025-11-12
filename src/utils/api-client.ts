@@ -35,6 +35,17 @@ export async function noteApiRequest(
     }
   }
 
+  // POST/PUTリクエストの場合、OriginとRefererヘッダーを追加（CSRF対策）
+  if (method === "POST" || method === "PUT") {
+    headers["Origin"] = "https://note.com";
+    headers["Referer"] = "https://note.com/";
+  }
+
+  // customHeadersがある場合は最後に適用（優先）
+  if (customHeaders) {
+    Object.assign(headers, customHeaders);
+  }
+
   const options: any = {
     method,
     headers,

@@ -125,29 +125,32 @@ export function registerNoteTools(server: McpServer) {
 
         console.error("下書き保存リクエスト内容:");
 
-        // 試行1: 最新のAPI形式で試行
+        // 試行1: 公式API形式で試行（参考: https://note.com/taku_sid/n/n1b1b7894e28f）
         try {
-          console.error("試行1: 最新のAPI形式");
-          const postData1 = {
-            title: title,
+          console.error("試行1: 公式API形式 /api/v1/text_notes");
+          
+          // 参照記事に基づく正しいパラメータ形式
+          const postData1: any = {
+            name: title,  // 'title'ではなく'name'
             body: body,
-            status: "draft",
-            tags: tags || [],
-            publish_at: null,
-            eyecatch_image: null,
-            price: 0,
-            is_magazine_note: false
+            template_key: null  // 新規作成時に必要
           };
+          
+          // 更新時はstatusを追加し、template_keyを削除
+          if (id) {
+            postData1.status = "draft";
+            delete postData1.template_key;
+          }
 
           console.error(`リクエスト内容: ${JSON.stringify(postData1, null, 2)}`);
 
           let endpoint = "";
           let method: "POST" | "PUT";
-          if (id) { // 既存記事の更新 (ユーザー提供情報に基づきV3を試す)
-            endpoint = `/v3/notes/${id}`;
+          if (id) { // 既存記事の更新
+            endpoint = `/v1/text_notes/${id}`;
             method = "PUT";
-          } else { // 新規作成 (一旦V2のまま)
-            endpoint = `/v2/notes`;
+          } else { // 新規作成
+            endpoint = `/v1/text_notes`;
             method = "POST";
           }
 

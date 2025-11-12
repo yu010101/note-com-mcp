@@ -14,12 +14,16 @@
     "dev:http": "npm run build && npm run start:http",
     "dev:watch": "tsc --watch",
     "dev:ts": "node --loader ts-node/esm --experimental-specifier-resolution=node --project tsconfig-dev.json src/note-mcp-server-refactored.ts",
-    "dev:http:ts": "node --loader ts-node/esm --experimental-specifier-resolution=node --project tsconfig-dev.json src/note-mcp-server-http.ts"
+    "dev:http:ts": "node --loader ts-node/esm --experimental-specifier-resolution=node --project tsconfig-dev.json src/note-mcp-server-http.ts",
+    "capture:session": "node scripts/capture-session-playwright.js",
+    "capture:session:puppeteer": "node scripts/capture-session.js"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.7.0",
     "dotenv": "^16.3.1",
     "node-fetch": "^3.3.2",
+    "playwright": "^1.56.1",
+    "puppeteer": "^21.11.0",
     "zod": "^3.22.4"
   },
   "devDependencies": {

@@ -197,19 +197,28 @@ export function buildAuthHeaders(): { [key: string]: string } {
   const headers: { [key: string]: string } = {};
   const cookies = [];
 
-  // セッションCookieの設定
-  // 環境変数を優先し、なければ動的に取得したものを利用
-  if (env.NOTE_SESSION_V5) {
-    cookies.push(`_note_session_v5=${env.NOTE_SESSION_V5}`);
-    if (env.DEBUG) console.error("Using session cookie from .env file for Cookie header");
-  } else if (activeSessionCookie) {
-    // activeSessionCookieは "_note_session_v5=value" の形式なのでそのまま使用
-    cookies.push(activeSessionCookie);
-    if (env.DEBUG) console.error("Using dynamically obtained session cookie for Cookie header");
-  }
+  // すべてのCookieを使用（参照記事の方式）
+  if (process.env.NOTE_ALL_COOKIES) {
+    // XSRF-TOKENはヘッダーで送るのでCookieからは除外
+    const cookiesWithoutXsrf = process.env.NOTE_ALL_COOKIES
+      .split('; ')
+      .filter(c => !c.startsWith('XSRF-TOKEN='))
+      .join('; ');
+    headers["Cookie"] = cookiesWithoutXsrf;
+    if (env.DEBUG) console.error("Using all cookies from .env file for Cookie header (XSRF-TOKEN excluded)");
+  } else {
+    // セッションCookieの設定（従来の方式）
+    if (env.NOTE_SESSION_V5) {
+      cookies.push(`_note_session_v5=${env.NOTE_SESSION_V5}`);
+      if (env.DEBUG) console.error("Using session cookie from .env file for Cookie header");
+    } else if (activeSessionCookie) {
+      cookies.push(activeSessionCookie);
+      if (env.DEBUG) console.error("Using dynamically obtained session cookie for Cookie header");
+    }
 
-  if (cookies.length > 0) {
-    headers["Cookie"] = cookies.join("; ");
+    if (cookies.length > 0) {
+      headers["Cookie"] = cookies.join("; ");
+    }
   }
 
   // XSRFトークンの設定 (ヘッダー用)
