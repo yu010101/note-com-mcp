@@ -63,3 +63,8 @@ logs/
 
 # Obsidianプラグイン（別リポジトリで管理）
 obsidian-to-note-publisher/
+
+# n8n関連ドキュメント（note-MCPの直接的な機能ではないため）
+DEPLOYMENT.md
+SUCCESS_STORY.md
+TUTORIAL_COMPLETE_MCP_SETUP.md
