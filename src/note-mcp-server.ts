@@ -5,6 +5,7 @@ import fetch from "node-fetch";
 import dotenv from "dotenv";
 import path from "path";
 import { fileURLToPath } from "url";
+import { refreshSessionWithPlaywright } from "./utils/playwright-session.js";
 
 // Markdown converter utility
 import { convertMarkdownToNoteHtml } from "./utils/markdown-converter.js";
@@ -287,8 +288,22 @@ async function loginToNote(): Promise<boolean> {
     }
 
     if (!response.ok) {
-      console.error(`Login failed: ${response.status} ${response.statusText} - ${responseText}`);
-      return false;
+      console.error(`APIログイン失敗: ${response.status} ${response.statusText} - ${responseText}`);
+      console.error("Playwrightでブラウザログインを試行します...");
+      try {
+        await refreshSessionWithPlaywright({ headless: false });
+        activeSessionCookie = process.env.NOTE_SESSION_V5 ? `_note_session_v5=${process.env.NOTE_SESSION_V5}` : null;
+        activeXsrfToken = process.env.NOTE_XSRF_TOKEN || null;
+        if (activeSessionCookie) {
+          console.error("Playwrightでのログインに成功しました。");
+          return true;
+        }
+        console.error("Playwrightでもセッションを取得できませんでした。");
+        return false;
+      } catch (playwrightError) {
+        console.error("Playwrightログインエラー:", playwrightError);
+        return false;
+      }
     }
 
     // レスポンスボディからトークン情報取得を試みる
@@ -331,8 +346,21 @@ async function loginToNote(): Promise<boolean> {
     }
 
     if (!activeSessionCookie) {
-      console.error("Login succeeded but session cookie was not found.");
-      return false;
+      console.error("APIログインでセッションCookieを取得できませんでした。Playwrightでブラウザログインを試行します...");
+      try {
+        await refreshSessionWithPlaywright({ headless: false });
+        activeSessionCookie = process.env.NOTE_SESSION_V5 ? `_note_session_v5=${process.env.NOTE_SESSION_V5}` : null;
+        activeXsrfToken = process.env.NOTE_XSRF_TOKEN || null;
+        if (activeSessionCookie) {
+          console.error("Playwrightでのログインに成功しました。");
+          return true;
+        }
+        console.error("Playwrightでもセッションを取得できませんでした。");
+        return false;
+      } catch (playwrightError) {
+        console.error("Playwrightログインエラー:", playwrightError);
+        return false;
+      }
     }
 
     console.error("Login successful. Session cookie obtained.");
