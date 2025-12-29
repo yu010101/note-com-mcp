@@ -11,7 +11,10 @@ import {
   getActiveSessionCookie,
   getActiveXsrfToken,
   setActiveSessionCookie,
-  setActiveXsrfToken
+  setActiveXsrfToken,
+  loadSessionFromFile,
+  saveSessionToFile,
+  validateSession,
 } from "./utils/auth.js";
 
 // Markdown converter utility
@@ -1924,21 +1927,43 @@ async function main() {
   try {
     console.error("Starting note API MCP Server...");
 
-    // 既にセッションCookieが.envに設定されていればそれを使用（ログイン試行しない）
-    if (NOTE_SESSION_V5) {
-      console.error("✅ 既存のセッションCookie (NOTE_SESSION_V5) を使用します。");
-      localActiveSessionCookie = `_note_session_v5=${NOTE_SESSION_V5}`;
-      if (NOTE_XSRF_TOKEN) {
-        localActiveXsrfToken = NOTE_XSRF_TOKEN;
+    // セッション管理の優先順位:
+    // 1. 保存済みセッションファイルを読み込み、有効性を確認
+    // 2. 無効または存在しない場合 → Playwrightでログイン
+    // 3. ログイン成功 → セッションをファイルに保存
+
+    let sessionValid = false;
+
+    // Step 1: 保存済みセッションを読み込み
+    if (loadSessionFromFile()) {
+      // Step 2: セッションの有効性を確認
+      sessionValid = await validateSession();
+      if (sessionValid) {
+        // auth.tsからセッションを同期
+        syncSessionFromAuth();
       }
-    } else if (NOTE_EMAIL && NOTE_PASSWORD) {
-      // セッションがない場合のみ、メールアドレスとパスワードでログイン試行
-      console.error("セッションCookieがないため、メールアドレスとパスワードからログイン試行中...");
-      const loginSuccess = await loginToNote();
-      if (loginSuccess) {
-        console.error("ログイン成功: セッションCookieを取得しました。");
+    }
+
+    // Step 3: セッションが無効または存在しない場合
+    if (!sessionValid) {
+      if (NOTE_EMAIL && NOTE_PASSWORD) {
+        console.error("🔐 Playwrightでブラウザログインを実行します...");
+        try {
+          await refreshSessionWithPlaywright();
+          // Playwrightがauth.tsに設定した値を同期
+          syncSessionFromAuth();
+          if (localActiveSessionCookie) {
+            // Step 4: セッションをファイルに保存
+            saveSessionToFile();
+            console.error("✅ ログイン成功: セッションを保存しました。");
+          } else {
+            console.error("⚠️ Playwrightログイン後もセッションが取得できませんでした。");
+          }
+        } catch (playwrightError) {
+          console.error("❌ Playwrightログインエラー:", playwrightError);
+        }
       } else {
-        console.error("ログイン失敗: メールアドレスまたはパスワードが正しくない可能性があります。");
+        console.error("⚠️ 認証情報がありません。.envにNOTE_EMAILとNOTE_PASSWORDを設定してください。");
       }
     }
 

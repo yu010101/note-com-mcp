@@ -1,12 +1,131 @@
 import { env, authStatus } from "../config/environment.js";
 import { API_BASE_URL } from "../config/api-config.js";
 import fetch from "node-fetch";
+import fs from "fs";
+import path from "path";
+import os from "os";
+
+// セッションファイルのパス（ホームディレクトリに保存）
+const SESSION_FILE_PATH = path.join(os.homedir(), '.note-mcp-session.json');
+
+// セッションファイルの構造
+interface SessionData {
+  sessionCookie: string;
+  xsrfToken: string | null;
+  userKey: string | null;
+  savedAt: string;
+}
 
 // 動的セッション情報を保持する変数
 let activeSessionCookie: string | null = null;
 let activeXsrfToken: string | null = null;
 let activeUserKey: string | null = null;
 let activeGqlAuthToken: string | null = null;
+
+/**
+ * セッションをファイルに保存
+ */
+export function saveSessionToFile(): boolean {
+  if (!activeSessionCookie) {
+    console.error("⚠️ セッションCookieがないため、保存できません");
+    return false;
+  }
+
+  const sessionData: SessionData = {
+    sessionCookie: activeSessionCookie,
+    xsrfToken: activeXsrfToken,
+    userKey: activeUserKey,
+    savedAt: new Date().toISOString(),
+  };
+
+  try {
+    fs.writeFileSync(SESSION_FILE_PATH, JSON.stringify(sessionData, null, 2), 'utf-8');
+    console.error(`✅ セッションを保存しました: ${SESSION_FILE_PATH}`);
+    return true;
+  } catch (error) {
+    console.error(`❌ セッションの保存に失敗しました: ${error}`);
+    return false;
+  }
+}
+
+/**
+ * セッションをファイルから読み込み
+ */
+export function loadSessionFromFile(): boolean {
+  try {
+    if (!fs.existsSync(SESSION_FILE_PATH)) {
+      console.error(`📋 セッションファイルがありません: ${SESSION_FILE_PATH}`);
+      return false;
+    }
+
+    const data = fs.readFileSync(SESSION_FILE_PATH, 'utf-8');
+    const sessionData: SessionData = JSON.parse(data);
+
+    if (!sessionData.sessionCookie) {
+      console.error("⚠️ セッションファイルにセッションCookieがありません");
+      return false;
+    }
+
+    activeSessionCookie = sessionData.sessionCookie;
+    activeXsrfToken = sessionData.xsrfToken;
+    activeUserKey = sessionData.userKey;
+
+    console.error(`✅ セッションを読み込みました (保存日時: ${sessionData.savedAt})`);
+    return true;
+  } catch (error) {
+    console.error(`❌ セッションの読み込みに失敗しました: ${error}`);
+    return false;
+  }
+}
+
+/**
+ * 保存済みセッションの有効性を確認（APIで検証）
+ */
+export async function validateSession(): Promise<boolean> {
+  if (!activeSessionCookie) {
+    return false;
+  }
+
+  try {
+    console.error("🔍 セッションの有効性を確認中...");
+    const response = await fetch(`${API_BASE_URL}/v2/current_user`, {
+      method: "GET",
+      headers: {
+        "Accept": "application/json",
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+        "Cookie": activeSessionCookie,
+      },
+    });
+
+    if (response.ok) {
+      const data = await response.json() as { data?: { urlname?: string } };
+      if (data?.data?.urlname) {
+        console.error(`✅ セッション有効 (ユーザー: ${data.data.urlname})`);
+        return true;
+      }
+    }
+
+    console.error("⚠️ セッションが無効または期限切れです");
+    return false;
+  } catch (error) {
+    console.error(`❌ セッション検証エラー: ${error}`);
+    return false;
+  }
+}
+
+/**
+ * セッションファイルを削除
+ */
+export function clearSessionFile(): void {
+  try {
+    if (fs.existsSync(SESSION_FILE_PATH)) {
+      fs.unlinkSync(SESSION_FILE_PATH);
+      console.error(`🗑️ セッションファイルを削除しました: ${SESSION_FILE_PATH}`);
+    }
+  } catch (error) {
+    console.error(`❌ セッションファイルの削除に失敗: ${error}`);
+  }
+}
 
 export function getActiveSessionCookie(): string | null {
   return activeSessionCookie;
