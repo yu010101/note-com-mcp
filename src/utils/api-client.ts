@@ -79,9 +79,12 @@ export async function noteApiRequest(
         errorText = "（レスポンステキストの取得に失敗）";
       }
 
+      // エラーは常に表示（デバッグ用）
+      console.error(`❌ API error: ${response.status} ${response.statusText}`);
+      console.error(`   Endpoint: ${endpoint}`);
+      console.error(`   Response: ${errorText}`);
+
       if (env.DEBUG) {
-        console.error(`API error on endpoint ${endpoint}: ${response.status} ${response.statusText}`);
-        console.error(`API error response body: ${errorText}`);
 
         // エンドポイントのバージョンをチェック
         if (endpoint.includes("/v1/") || endpoint.includes("/v3/")) {
