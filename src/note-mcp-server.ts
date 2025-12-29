@@ -4,6 +4,7 @@ import { z } from "zod";
 import fetch from "node-fetch";
 import dotenv from "dotenv";
 import path from "path";
+import fs from "fs";
 import { fileURLToPath } from "url";
 import { refreshSessionWithPlaywright } from "./utils/playwright-session.js";
 import {
@@ -21,11 +22,39 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 // 環境変数を読み込む（ビルドディレクトリを考慮）
-dotenv.config({ path: path.resolve(__dirname, '../.env') });
-dotenv.config({ path: path.resolve(__dirname, '.env') });
+// Windowsでも動作するようにパスを正規化
+const envPaths = [
+  path.resolve(__dirname, '../.env'),
+  path.resolve(__dirname, '.env'),
+  path.resolve(process.cwd(), '.env'),
+];
+
+// 各パスを試行し、最初に見つかった.envを使用
+let envLoaded = false;
+for (const envPath of envPaths) {
+  if (fs.existsSync(envPath)) {
+    const result = dotenv.config({ path: envPath });
+    if (!result.error) {
+      console.error(`✅ .env loaded from: ${envPath}`);
+      envLoaded = true;
+      break;
+    }
+  }
+}
+if (!envLoaded) {
+  console.error(`⚠️ .env not found. Tried paths: ${envPaths.join(', ')}`);
+  console.error(`   Current working directory: ${process.cwd()}`);
+  console.error(`   __dirname: ${__dirname}`);
+}
 
 // デバッグモード
 const DEBUG = process.env.DEBUG === "true";
+
+// 環境変数の読み込み状態を表示
+console.error(`📋 Environment check:`);
+console.error(`   NOTE_EMAIL: ${process.env.NOTE_EMAIL ? '✓ set' : '✗ not set'}`);
+console.error(`   NOTE_PASSWORD: ${process.env.NOTE_PASSWORD ? '✓ set' : '✗ not set'}`);
+console.error(`   NOTE_SESSION_V5: ${process.env.NOTE_SESSION_V5 ? '✓ set' : '✗ not set'}`);
 
 // APIのベースURL
 const API_BASE_URL = "https://note.com/api";
