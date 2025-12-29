@@ -104,18 +104,34 @@ export async function refreshSessionWithPlaywright(
     let browser: ChromiumBrowser | null = null;
 
     try {
+        // Windowsではheadless: falseでブラウザが起動直後に閉じる問題があるため、
+        // 明示的にPLAYWRIGHT_HEADLESS=falseが設定されていない限りheadlessを使用
+        const isWindows = process.platform === "win32";
+        const effectiveHeadless = isWindows && process.env.PLAYWRIGHT_HEADLESS !== "false"
+            ? true
+            : merged.headless;
+
         console.error("🕹️ Playwrightでnote.comセッションを自動取得します...");
         console.error(
-            `   headless=${merged.headless} (PLAYWRIGHT_HEADLESS=${process.env.PLAYWRIGHT_HEADLESS ?? "undefined"})`,
+            `   headless=${effectiveHeadless} (PLAYWRIGHT_HEADLESS=${process.env.PLAYWRIGHT_HEADLESS ?? "undefined"}, platform=${process.platform})`,
         );
 
+        // Windows用の追加引数
+        const browserArgs = [
+            "--disable-blink-features=AutomationControlled",
+            "--disable-dev-shm-usage",
+            "--no-sandbox",
+        ];
+        if (isWindows) {
+            browserArgs.push(
+                "--disable-gpu",
+                "--disable-software-rasterizer",
+            );
+        }
+
         browser = await chromium.launch({
-            headless: merged.headless,
-            args: [
-                "--disable-blink-features=AutomationControlled",
-                "--disable-dev-shm-usage",
-                "--no-sandbox",
-            ],
+            headless: effectiveHeadless,
+            args: browserArgs,
         });
 
         const context = await browser.newContext({

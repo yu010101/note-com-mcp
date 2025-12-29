@@ -310,7 +310,9 @@ async function loginToNote(): Promise<boolean> {
       console.error(`APIログイン失敗: ${response.status} ${response.statusText} - ${responseText}`);
       console.error("Playwrightでブラウザログインを試行します...");
       try {
-        await refreshSessionWithPlaywright({ headless: false });
+        // 環境変数PLAYWRIGHT_HEADLESSに従う（未設定の場合はheadless: true）
+        // Windowsでheadless: falseを強制すると起動に失敗することがある
+        await refreshSessionWithPlaywright();
         // Playwrightがauth.tsに設定した値を同期
         syncSessionFromAuth();
         if (localActiveSessionCookie) {
