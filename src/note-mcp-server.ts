@@ -1973,11 +1973,11 @@ async function main() {
     console.error("note API MCP Server is running on stdio transport");
 
     // 認証状態を表示
-    if (localActiveSessionCookie || NOTE_SESSION_V5 || NOTE_XSRF_TOKEN) {
-      console.error("認証情報が設定されています。認証が必要な機能も利用できます。");
+    if (localActiveSessionCookie) {
+      console.error("✅ 認証情報が設定されています。認証が必要な機能も利用できます。");
     } else {
-      console.error("警告: 認証情報が設定されていません。読み取り機能のみ利用可能です。");
-      console.error("投稿、コメント、スキなどの機能を使うには.envファイルに認証情報を設定してください。");
+      console.error("⚠️ 警告: 認証情報が設定されていません。読み取り機能のみ利用可能です。");
+      console.error("   Playwrightでログインするか、セッションファイルを確認してください。");
     }
   } catch (error) {
     console.error("Fatal error during server startup:", error);
