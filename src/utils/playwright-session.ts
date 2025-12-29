@@ -34,7 +34,7 @@ export interface PlaywrightSessionOptions {
 
 const DEFAULT_OPTIONS: Required<PlaywrightSessionOptions> = {
     headless: false, // デフォルトはブラウザを表示
-    navigationTimeoutMs: 300000, // 5分待機（手動ログイン用）
+    navigationTimeoutMs: 60000, // 1分待機
 };
 
 export async function refreshSessionWithPlaywright(
@@ -104,7 +104,7 @@ export async function refreshSessionWithPlaywright(
         }
 
         // ログイン完了を待機（URLがログインページから変わるか、セッションCookieが設定されるまで）
-        console.error("   ⏳ ログイン完了を待機中... (最大5分)");
+        console.error("   ⏳ ログイン完了を待機中... (最大1分)");
         await waitForLoginCompletion(page, context, merged.navigationTimeoutMs);
         console.error("   ✓ ログイン完了を検出しました");
 
