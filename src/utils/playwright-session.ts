@@ -95,16 +95,17 @@ async function waitForFirstVisibleLocator(
 export async function refreshSessionWithPlaywright(
     options?: PlaywrightSessionOptions,
 ): Promise<void> {
-    if (!env.NOTE_EMAIL || !env.NOTE_PASSWORD) {
-        throw new Error("NOTE_EMAIL と NOTE_PASSWORD が設定されていません");
-    }
-
+    const hasCredentials = env.NOTE_EMAIL && env.NOTE_PASSWORD;
     const merged = { ...DEFAULT_OPTIONS, ...(options || {}) };
 
     let browser: ChromiumBrowser | null = null;
 
     try {
-        console.error("🕹️ Playwrightでnote.comセッションを自動取得します...");
+        if (hasCredentials) {
+            console.error("🕹️ Playwrightでnote.comセッションを自動取得します...");
+        } else {
+            console.error("🕹️ Playwrightでnote.comにブラウザを開きます（手動ログインが必要です）...");
+        }
         console.error(
             `   headless=${merged.headless} (PLAYWRIGHT_HEADLESS=${process.env.PLAYWRIGHT_HEADLESS ?? "undefined"})`,
         );
@@ -128,71 +129,91 @@ export async function refreshSessionWithPlaywright(
         await page.goto("https://note.com/login", { waitUntil: "networkidle" });
         await ensureEmailLoginForm(page, merged.navigationTimeoutMs);
 
-        // note.comのログインフォームは2つの入力フィールドがある
-        // 最初の visible input がメールアドレス、2番目がパスワード
-        const inputs = await page.$$('input:not([type="hidden"])');
-        if (inputs.length >= 2) {
-            await inputs[0].fill(env.NOTE_EMAIL);
-            await inputs[1].fill(env.NOTE_PASSWORD);
-        } else {
-            // フォールバック: 従来のセレクター
-            const emailLocator = await waitForFirstVisibleLocator(
-                page,
-                [
-                    "input[name='login']",
-                    "input[name='login_id']",
-                    "input[type='email']",
-                    "input[data-testid='email-input']",
-                    "input:not([type='hidden']):not([type='password'])",
-                ],
-                merged.navigationTimeoutMs,
-            );
-            await emailLocator.fill(env.NOTE_EMAIL);
+        if (hasCredentials) {
+            // 自動ログイン: メールアドレスとパスワードを自動入力
+            // note.comのログインフォームは2つの入力フィールドがある
+            // 最初の visible input がメールアドレス、2番目がパスワード
+            const inputs = await page.$$('input:not([type="hidden"])');
+            if (inputs.length >= 2) {
+                await inputs[0].fill(env.NOTE_EMAIL);
+                await inputs[1].fill(env.NOTE_PASSWORD);
+            } else {
+                // フォールバック: 従来のセレクター
+                const emailLocator = await waitForFirstVisibleLocator(
+                    page,
+                    [
+                        "input[name='login']",
+                        "input[name='login_id']",
+                        "input[type='email']",
+                        "input[data-testid='email-input']",
+                        "input:not([type='hidden']):not([type='password'])",
+                    ],
+                    merged.navigationTimeoutMs,
+                );
+                await emailLocator.fill(env.NOTE_EMAIL);
 
-            const passwordLocator = await waitForFirstVisibleLocator(
-                page,
-                [
-                    "input[name='password']",
-                    "input[type='password']",
-                    "input[data-testid='password-input']",
-                ],
-                merged.navigationTimeoutMs,
-            );
-            await passwordLocator.fill(env.NOTE_PASSWORD);
-        }
+                const passwordLocator = await waitForFirstVisibleLocator(
+                    page,
+                    [
+                        "input[name='password']",
+                        "input[type='password']",
+                        "input[data-testid='password-input']",
+                    ],
+                    merged.navigationTimeoutMs,
+                );
+                await passwordLocator.fill(env.NOTE_PASSWORD);
+            }
 
-        let submitClicked = false;
-        const submitSelectors = [
-            "button[type='submit']",
-            "button:has-text(\"ログイン\")",
-            "button[data-testid='login-button']",
-        ];
+            let submitClicked = false;
+            const submitSelectors = [
+                "button[type='submit']",
+                "button:has-text(\"ログイン\")",
+                "button[data-testid='login-button']",
+            ];
 
-        for (const selector of submitSelectors) {
-            const locator = page.locator(selector);
-            if (await locator.count()) {
-                try {
-                    await Promise.all([
-                        page.waitForNavigation({
-                            waitUntil: "networkidle",
-                            timeout: merged.navigationTimeoutMs,
-                        }),
-                        locator.first().click(),
-                    ]);
-                    submitClicked = true;
-                    break;
-                } catch (error) {
-                    console.error(`⚠️ ログインボタン(${selector})クリック時にエラー:`, error);
+            for (const selector of submitSelectors) {
+                const locator = page.locator(selector);
+                if (await locator.count()) {
+                    try {
+                        await Promise.all([
+                            page.waitForNavigation({
+                                waitUntil: "networkidle",
+                                timeout: merged.navigationTimeoutMs,
+                            }),
+                            locator.first().click(),
+                        ]);
+                        submitClicked = true;
+                        break;
+                    } catch (error) {
+                        console.error(`⚠️ ログインボタン(${selector})クリック時にエラー:`, error);
+                    }
                 }
             }
-        }
 
-        if (!submitClicked) {
-            await page.keyboard.press("Enter");
-            await page.waitForNavigation({
-                waitUntil: "networkidle",
-                timeout: merged.navigationTimeoutMs,
-            });
+            if (!submitClicked) {
+                await page.keyboard.press("Enter");
+                await page.waitForNavigation({
+                    waitUntil: "networkidle",
+                    timeout: merged.navigationTimeoutMs,
+                });
+            }
+        } else {
+            // 手動ログイン: ユーザーがログインするまで待機
+            console.error("📝 ブラウザでnote.comにログインしてください...");
+            console.error("   ログイン完了後、自動的にセッション情報を取得します。");
+
+            // ログイン完了を検知（URLがログインページから変わるか、セッションCookieが設定されるまで待機）
+            await page.waitForFunction(
+                () => {
+                    return !window.location.href.includes('/login') ||
+                        document.cookie.includes('_note_session_v5');
+                },
+                { timeout: merged.navigationTimeoutMs }
+            );
+
+            // ログイン後のページ遷移を待機
+            await page.waitForLoadState('networkidle');
+            console.error("✅ ログインを検知しました。セッション情報を取得中...");
         }
 
         const cookies = await context.cookies();
