@@ -1893,14 +1893,41 @@ async function main() {
   try {
     console.error("Starting note API MCP Server...");
 
-    // メールアドレスとパスワードが設定されていれば自動ログインを試行
-    if (NOTE_EMAIL && NOTE_PASSWORD) {
+    // 認証情報の確認と自動ログイン
+    if (NOTE_SESSION_V5 || NOTE_XSRF_TOKEN) {
+      // 既存のセッションCookieがあればそれを使用
+      console.error("既存のセッションCookieを使用します。");
+      if (NOTE_SESSION_V5) {
+        localActiveSessionCookie = `_note_session_v5=${NOTE_SESSION_V5}`;
+        setActiveSessionCookie(localActiveSessionCookie);
+      }
+      if (NOTE_XSRF_TOKEN) {
+        localActiveXsrfToken = NOTE_XSRF_TOKEN;
+        setActiveXsrfToken(localActiveXsrfToken);
+      }
+    } else if (NOTE_EMAIL && NOTE_PASSWORD) {
+      // メールアドレスとパスワードが設定されていれば自動ログインを試行
       console.error("メールアドレスとパスワードからログイン試行中...");
       const loginSuccess = await loginToNote();
       if (loginSuccess) {
         console.error("ログイン成功: セッションCookieを取得しました。");
       } else {
         console.error("ログイン失敗: メールアドレスまたはパスワードが正しくない可能性があります。");
+      }
+    } else {
+      // 認証情報がない場合、Playwrightで手動ログインを試行
+      console.error("認証情報が設定されていません。Playwrightでブラウザログインを試行します...");
+      console.error("ブラウザが開いたら、note.comにログインしてください。");
+      try {
+        await refreshSessionWithPlaywright({ headless: false });
+        syncSessionFromAuth();
+        if (localActiveSessionCookie) {
+          console.error("Playwrightでのログインに成功しました。");
+        } else {
+          console.error("Playwrightでもセッションを取得できませんでした。");
+        }
+      } catch (playwrightError) {
+        console.error("Playwrightログインエラー:", playwrightError);
       }
     }
 
