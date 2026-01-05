@@ -85,14 +85,12 @@ ls -la build/note-mcp-server.js
 ### Phase 5: 環境変数設定
 
 ```bash
-# .env ファイル作成
-cp .env.sample .env
-```
-
-**または**:
-```bash
+# 空の .env ファイルを作成（認証情報は後でブラウザログインで自動取得）
 touch .env
 ```
+
+> **Note**: `.env`に`NOTE_EMAIL`や`NOTE_PASSWORD`を設定する必要はありません。
+> Cursor再起動後、初回のMCPツール呼び出し時にブラウザが開き、手動ログインでセッションを取得します。
 
 ### Phase 6: MCP クライアント設定
 
@@ -145,15 +143,6 @@ MCP設定ファイル `%USERPROFILE%\.cursor\mcp.json`:
 }
 ```
 
-### Phase 7: 動作確認
-
-```bash
-npm run start
-```
-
-- ブラウザが開いたら手動でログイン
-- Ctrl+C で終了
-
 ## ✅ 完了チェックリスト
 
 セットアップ完了後、以下を確認：
@@ -164,7 +153,8 @@ npm run start
 4. [x] npx playwright install → 成功
 5. [x] npm run build → 成功
 6. [x] build/note-mcp-server.js → 存在
-7. [x] ~/.cursor/mcp.json → 作成済み
+7. [x] .env → 作成済み
+8. [x] ~/.cursor/mcp.json → 作成済み
 
 ## 📝 完了報告テンプレート
 
@@ -185,6 +175,8 @@ npm run start
 🚀 次のステップ:
 1. Cursor を再起動
 2. 「noteで記事を検索して」と試す
+3. 初回はブラウザが開くので note.com にログイン
+4. ログイン完了後、自動でセッションが取得されます
 ◤◢◤◢◤◢◤◢◤◢◤◢◤◢
 ```
 

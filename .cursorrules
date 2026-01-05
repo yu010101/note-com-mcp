@@ -58,7 +58,19 @@ ls build/note-mcp-server.js
 
 ---
 
-### Step 5: プロジェクトパス取得
+### Step 5: 環境変数設定
+
+```bash
+# 空の .env ファイルを作成（認証情報は後でブラウザログインで自動取得）
+touch .env
+```
+
+> **Note**: `.env`に`NOTE_EMAIL`や`NOTE_PASSWORD`を設定する必要はありません。
+> Cursor再起動後、初回のMCPツール呼び出し時にブラウザが開き、手動ログインでセッションを取得します。
+
+---
+
+### Step 6: プロジェクトパス取得
 
 ```bash
 pwd
@@ -68,7 +80,7 @@ pwd
 
 ---
 
-### Step 6: OS判定
+### Step 7: OS判定
 
 ```bash
 uname -s 2>/dev/null || echo "Windows"
@@ -80,7 +92,7 @@ uname -s 2>/dev/null || echo "Windows"
 
 ---
 
-### Step 7: MCP設定ファイル作成
+### Step 8: MCP設定ファイル作成
 
 #### Macの場合
 
@@ -95,13 +107,13 @@ mkdir -p ~/.cursor
   "mcpServers": {
     "note-api": {
       "command": "node",
-      "args": ["ここにStep5のパス/build/note-mcp-server.js"]
+      "args": ["ここにStep6のパス/build/note-mcp-server.js"]
     }
   }
 }
 ```
 
-**重要: `ここにStep5のパス` を実際のパスに置き換える**
+**重要: `ここにStep6のパス` を実際のパスに置き換える**
 
 #### Windowsの場合
 
@@ -122,18 +134,6 @@ mkdir -p ~/.cursor
 
 ---
 
-### Step 8: 動作確認
-
-```bash
-npm run start
-```
-
-- ブラウザが開いたらnote.comにログイン
-- ログイン後、自動でセッション取得
-- `Ctrl+C` で終了
-
----
-
 ### Step 9: 完了報告
 
 以下のように報告する：
@@ -142,12 +142,11 @@ npm run start
 ◤◢◤◢◤◢◤◢◤◢◤◢◤◢
 ✅ セットアップ完了！
 
-次のステップ：
-1. Cursorを再起動してください
-2. 「noteで記事を検索して」と試してください
-
-認証について：
-初回はブラウザが開くのでnote.comにログインしてください
+🚀 次のステップ:
+1. Cursor を再起動
+2. 「noteで記事を検索して」と試す
+3. 初回はブラウザが開くので note.com にログイン
+4. ログイン完了後、自動でセッションが取得されます
 ◤◢◤◢◤◢◤◢◤◢◤◢◤◢
 ```
 
