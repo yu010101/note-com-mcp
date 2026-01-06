@@ -50,9 +50,32 @@ npm run build
 
 ### 2. 認証設定
 
-#### 方法A: 初回起動時に手動ログイン（推奨）
+#### 方法A: 環境変数で認証情報を設定（推奨）
 
-`.env`ファイルなしで起動すると、Playwrightがブラウザを開きます。
+```bash
+cp .env.sample .env
+```
+
+`.env` を編集：
+```env
+NOTE_EMAIL=your-email@example.com
+NOTE_PASSWORD=your-password
+# 以下はオプション（自動取得される）
+NOTE_SESSION_V5=取得したセッションCookie
+NOTE_XSRF_TOKEN=取得したXSRFトークン
+NOTE_USER_ID=あなたのユーザーID
+```
+
+**メリット**:
+- MCPクライアント（Claude Desktop/Cursor/n8n）からバックグラウンドで起動可能
+- セッション切れ時に自動再ログイン
+- リモートサーバー（VPS/Docker）でも動作
+
+**セキュリティ**: `.env`ファイルは`.gitignore`に含まれているため、リポジトリにコミットされません。
+
+#### 方法B: 初回起動時に手動ログイン（開発・デバッグ用）
+
+認証情報なしで起動すると、Playwrightがブラウザを開きます。
 
 ```bash
 npm run start
@@ -65,23 +88,7 @@ npm run start
 5. ブラウザが自動で閉じる
 6. MCPサーバーが起動完了
 
-#### 方法B: .envファイルで認証情報を設定
-
-```bash
-cp .env.sample .env
-```
-
-`.env` を編集
-```env
-NOTE_EMAIL=your-email@example.com
-NOTE_PASSWORD=your-password
-# 以下はオプション（自動取得される）
-NOTE_SESSION_V5=取得したセッションCookie
-NOTE_XSRF_TOKEN=取得したXSRFトークン
-NOTE_USER_ID=あなたのユーザーID
-```
-
-**注意**: `NOTE_EMAIL`と`NOTE_PASSWORD`を設定すると、自動ログインを試行します。
+**注意**: この方法はローカル開発時のみ使用してください。リモートサーバーやヘッドレス環境では動作しません。
 
 ### 3. 起動
 
