@@ -19,7 +19,27 @@ alwaysApply: true
 - 「note MCP を使えるようにして」
 - 「初期設定をして」
 
-## 🔧 自動実行シーケンス
+## 🚀 推奨: セットアップスクリプトを使用
+
+**最も確実な方法は、セットアップスクリプトを実行することです。**
+
+### Macの場合
+```bash
+./scripts/setup.sh
+```
+
+### Windowsの場合
+```powershell
+.\scripts\setup.ps1
+```
+
+スクリプトが正常に完了したら、Cursorを再起動してください。
+
+> ⚠️ **エラーが発生した場合**: `docs/SETUP_ERRORS_AND_SOLUTIONS.md` を参照してください。
+
+---
+
+## 🔧 手動セットアップ（スクリプトが使えない場合）
 
 ### Phase 1: 環境確認（必須）
 

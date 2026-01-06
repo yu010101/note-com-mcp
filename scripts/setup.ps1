@@ -163,8 +163,8 @@ if (Test-Path $mcpConfigFile) {
     Copy-Item $mcpConfigFile "$mcpConfigFile.backup.$timestamp"
 }
 
-# パスをエスケープ（バックスラッシュをダブルに）
-$escapedPath = $projectPath -replace '\\', '\\\\'
+# パスをエスケープ（バックスラッシュをダブルに）- Replace()メソッドを使用
+$escapedPath = $projectPath.Replace('\', '\\')
 
 # MCP 設定ファイル作成
 $mcpConfig = @"
@@ -172,7 +172,7 @@ $mcpConfig = @"
   "mcpServers": {
     "note-api": {
       "command": "node",
-      "args": ["$escapedPath\\\\build\\\\note-mcp-server.js"],
+      "args": ["$escapedPath\\build\\note-mcp-server.js"],
       "env": {}
     }
   }

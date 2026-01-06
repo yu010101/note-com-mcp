@@ -2,11 +2,31 @@
 
 ## 重要: このファイルを最初に読むこと
 
-ユーザーが「セットアップして」「設定して」「インストールして」「使えるようにして」と言ったら、以下の手順を**すべて順番に実行**してください。
+ユーザーが「セットアップして」「設定して」「インストールして」「使えるようにして」と言ったら、以下の手順を実行してください。
 
 ---
 
-## セットアップ手順（必ずこの順番で実行）
+## 🚀 推奨: セットアップスクリプトを使用
+
+**最も確実な方法は、セットアップスクリプトを実行することです。**
+
+### Macの場合
+```bash
+./scripts/setup.sh
+```
+
+### Windowsの場合
+```powershell
+.\scripts\setup.ps1
+```
+
+スクリプトが正常に完了したら、Cursorを再起動してください。
+
+---
+
+## 手動セットアップ（スクリプトが使えない場合）
+
+以下の手順を**すべて順番に実行**してください。
 
 ### Step 1: Node.js確認
 
@@ -129,8 +149,8 @@ mkdir -p ~/.cursor
 # ディレクトリ作成
 New-Item -Path "$env:USERPROFILE\.cursor" -ItemType Directory -Force
 
-# プロジェクトパス取得
-$projectPath = (Get-Location).Path -replace '\\', '\\\\'
+# プロジェクトパス取得（Replace()メソッドを使用）
+$projectPath = (Get-Location).Path.Replace('\', '\\')
 
 # MCP設定ファイル作成（UTF-8で保存）
 $config = @"
@@ -147,6 +167,8 @@ $config | Out-File -FilePath "$env:USERPROFILE\.cursor\mcp.json" -Encoding utf8
 ```
 
 **重要: 上記コマンドをプロジェクトディレクトリで実行すること**
+
+> ⚠️ **エラーが発生した場合**: `docs/SETUP_ERRORS_AND_SOLUTIONS.md` を参照してください。
 
 ---
 
