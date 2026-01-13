@@ -4,24 +4,22 @@ import { NotionClient } from "../utils/notion-client.js";
 import { NotionBlockParser } from "../utils/notion-block-parser.js";
 import { NotionToNoteFormatter } from "../utils/notion-to-note-formatter.js";
 import { NoteImageUploader, ImageData } from "../utils/note-image-uploader.js";
-import { 
-  ListNotionPagesArgs, 
-  GetNotionPageArgs, 
-  PreviewNotionToNoteArgs, 
+import {
+  ListNotionPagesArgs,
+  GetNotionPageArgs,
+  PreviewNotionToNoteArgs,
   ImportNotionToNoteArgs,
   ImportResult,
-  NotionErrorCode 
+  NotionErrorCode,
 } from "../types/notion-types.js";
 import { DEFAULT_PAGE_SIZE } from "../config/notion-config.js";
 import {
   createSuccessResponse,
   createErrorResponse,
   createAuthErrorResponse,
-  handleApiError
+  handleApiError,
 } from "../utils/error-handler.js";
-import {
-  hasAuth
-} from "../utils/auth.js";
+import { hasAuth } from "../utils/auth.js";
 import { noteApiRequest } from "../utils/api-client.js";
 
 /**
@@ -39,7 +37,12 @@ export function registerNotionTools(server: McpServer): void {
     "List pages from a Notion database",
     {
       databaseId: z.string().describe("Notion database ID to query"),
-      pageSize: z.number().min(1).max(100).optional().describe("Number of pages to retrieve (default: 20)"),
+      pageSize: z
+        .number()
+        .min(1)
+        .max(100)
+        .optional()
+        .describe("Number of pages to retrieve (default: 20)"),
     },
     async ({ databaseId, pageSize }) => {
       try {
@@ -49,7 +52,7 @@ export function registerNotionTools(server: McpServer): void {
         });
 
         return createSuccessResponse({
-          pages: result.pages.map(page => ({
+          pages: result.pages.map((page) => ({
             id: page.id,
             title: page.title,
             url: page.url,
@@ -84,7 +87,7 @@ export function registerNotionTools(server: McpServer): void {
             created_time: page.created_time,
             last_edited_time: page.last_edited_time,
           },
-          blocks: blocks.map(block => ({
+          blocks: blocks.map((block) => ({
             id: block.id,
             type: block.type,
             has_children: block.has_children,
@@ -201,7 +204,7 @@ async function importNotionToNote(
     if (!hasAuth()) {
       throw new Error("note.comの認証情報が不足しています。");
     }
-    
+
     // ページ情報とブロックを取得
     const page = await notionClient.getPage(pageId);
     const blocks = await notionClient.getBlocks(page.id, true);
@@ -222,24 +225,25 @@ async function importNotionToNote(
 
     // 画像をダウンロードしてBase64に変換
     const images: ImageData[] = [];
-    
+
     for (const ref of imageReferences) {
       try {
         // IRから画像URLを取得
-        const imageNode = irNodes.find(node => 
-          node.type === 'image' && node.content && ref.includes(node.content.split('?')[0])
+        const imageNode = irNodes.find(
+          (node) =>
+            node.type === "image" && node.content && ref.includes(node.content.split("?")[0])
         );
-        
+
         if (imageNode?.content) {
           const { buffer, mimeType } = await notionClient.downloadImage(imageNode.content);
-          const base64 = buffer.toString('base64');
-          
+          const base64 = buffer.toString("base64");
+
           images.push({
             fileName: ref,
             base64,
             mimeType,
           });
-          
+
           result.stats.images_success++;
         }
       } catch (error: any) {
@@ -247,24 +251,29 @@ async function importNotionToNote(
         result.warnings.push(`Failed to download image ${ref}: ${error.message}`);
       }
     }
-    
+
     // 画像をアップロード
     const uploadedImages = await NoteImageUploader.uploadImages(images);
-    
+
     // Markdown内の画像参照をHTMLに置換
     const body = NoteImageUploader.replaceImageReferences(markdown, uploadedImages);
-    
+
     // note.comに投稿
-    const response = await noteApiRequest("/v3/notes", "POST", {
-      title: page.title,
-      body: body,
-      status: saveAsDraft ? "draft" : "published",
-      tags: tags,
-    }, true);
-    
+    const response = await noteApiRequest(
+      "/v3/notes",
+      "POST",
+      {
+        title: page.title,
+        body: body,
+        status: saveAsDraft ? "draft" : "published",
+        tags: tags,
+      },
+      true
+    );
+
     result.success = true;
     result.note_id = response.data?.id;
-    
+
     return result;
   } catch (error: any) {
     result.error = error.message || error;

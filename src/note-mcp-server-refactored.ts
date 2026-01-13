@@ -12,7 +12,7 @@ import { registerPrompts } from "./prompts/prompts.js";
 /**
  * ◤◢◤◢◤◢◤◢◤◢◤◢◤◢
  * note API MCP Server (Refactored)
- * 
+ *
  * 機能別に分割・リファクタリングされたnote API MCPサーバー
  * - 設定管理の分離
  * - 型定義の整理
@@ -25,7 +25,7 @@ import { registerPrompts } from "./prompts/prompts.js";
 // MCP サーバーインスタンスを作成
 const server = new McpServer({
   name: "note-api",
-  version: "2.0.0"
+  version: "2.0.0",
 });
 
 /**
@@ -39,7 +39,7 @@ async function initializeServer(): Promise<void> {
   // ツールの登録
   console.error("📝 ツールを登録中...");
   registerAllTools(server);
-  
+
   // プロンプトの登録
   console.error("💭 プロンプトを登録中...");
   registerPrompts(server);
@@ -74,7 +74,9 @@ async function performAuthentication(): Promise<void> {
   } else {
     console.error("⚠️  警告: 認証情報が設定されていません");
     console.error("👀 読み取り機能のみ利用可能です");
-    console.error("📝 投稿、コメント、スキなどの機能を使うには.envファイルに認証情報を設定してください");
+    console.error(
+      "📝 投稿、コメント、スキなどの機能を使うには.envファイルに認証情報を設定してください"
+    );
   }
   console.error("◤◢◤◢◤◢◤◢◤◢◤◢◤◢");
 }
@@ -90,15 +92,15 @@ async function startServer(): Promise<void> {
 
     // サーバーの初期化
     await initializeServer();
-    
+
     // 認証処理
     await performAuthentication();
-    
+
     // STDIOトランスポートを作成して接続
     console.error("🔌 STDIOトランスポートに接続中...");
     const transport = new StdioServerTransport();
     await server.connect(transport);
-    
+
     console.error("◤◢◤◢◤◢◤◢◤◢◤◢◤◢");
     console.error("🎉 note API MCP Server v2.0.0 が正常に起動しました!");
     console.error("📡 STDIO transport で稼働中");
@@ -112,7 +114,7 @@ async function startServer(): Promise<void> {
     console.error("  - search-users: ユーザー検索");
     console.error("  - search-magazines: マガジン検索");
     console.error("  - search-all: 全体検索");
-    
+
     console.error("\n📝 記事機能:");
     console.error("  - get-note: 記事詳細取得");
     console.error("  - post-draft-note: 下書き投稿");
@@ -120,18 +122,18 @@ async function startServer(): Promise<void> {
     console.error("  - post-comment: コメント投稿");
     console.error("  - like-note / unlike-note: スキ操作");
     console.error("  - get-my-notes: 自分の記事一覧");
-    
+
     console.error("\n👥 ユーザー機能:");
     console.error("  - get-user: ユーザー詳細取得");
     console.error("  - get-user-notes: ユーザーの記事一覧");
     console.error("  - get-stats: PV統計取得");
-    
+
     console.error("\n🎪 メンバーシップ機能:");
     console.error("  - get-membership-summaries: 加入メンバーシップ一覧");
     console.error("  - get-membership-plans: 自分のプラン一覧");
     console.error("  - get-membership-notes: メンバーシップ記事一覧");
     console.error("  - get-circle-info: サークル情報取得");
-    
+
     console.error("\n📚 その他機能:");
     console.error("  - get-magazine: マガジン詳細取得");
     console.error("  - list-categories: カテゴリー一覧");
@@ -149,7 +151,6 @@ async function startServer(): Promise<void> {
     console.error("\n◤◢◤◢◤◢◤◢◤◢◤◢◤◢");
     console.error("🎯 Ready for requests!");
     console.error("◤◢◤◢◤◢◤◢◤◢◤◢◤◢");
-
   } catch (error) {
     console.error("◤◢◤◢◤◢◤◢◤◢◤◢◤◢");
     console.error("💥 Fatal error during server startup:");
@@ -160,7 +161,7 @@ async function startServer(): Promise<void> {
 }
 
 // メイン処理の実行
-startServer().catch(error => {
+startServer().catch((error) => {
   console.error("◤◢◤◢◤◢◤◢◤◢◤◢◤◢");
   console.error("💥 Fatal error:");
   console.error(error);

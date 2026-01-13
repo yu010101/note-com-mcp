@@ -4,11 +4,15 @@ import {
   Comment,
   FormattedComment,
   Like,
-  FormattedLike
+  FormattedLike,
 } from "../types/note-types.js";
 import { NoteUser, FormattedUser } from "../types/user-types.js";
 import { Magazine, FormattedMagazine } from "../types/api-types.js";
-import { FormattedMembershipNote, MembershipSummary, MembershipPlan } from "../types/membership-types.js";
+import {
+  FormattedMembershipNote,
+  MembershipSummary,
+  MembershipPlan,
+} from "../types/membership-types.js";
 
 // 記事データのフォーマット
 export function formatNote(
@@ -26,26 +30,42 @@ export function formatNote(
   const isPaid = price > 0;
 
   // eyecatchUrlを常に含める（複数のフィールド名に対応）
-  const eyecatchUrl = note.eyecatch || note.sp_eyecatch || note.eyecatch_url || note.eyecatchUrl || note.thumbnail || null;
+  const eyecatchUrl =
+    note.eyecatch ||
+    note.sp_eyecatch ||
+    note.eyecatch_url ||
+    note.eyecatchUrl ||
+    note.thumbnail ||
+    null;
 
   // publishedAtを複数のフィールド名から取得
-  const publishedAt = note.publishAt || note.publish_at || note.published_at || note.createdAt || note.created_at || '日付不明';
+  const publishedAt =
+    note.publishAt ||
+    note.publish_at ||
+    note.published_at ||
+    note.createdAt ||
+    note.created_at ||
+    "日付不明";
 
   return {
     id: note.id || "",
     key: note.key || "",
     title: note.name || "",
     body: note.body || note.noteDraft?.body || "",
-    excerpt: note.body ? (note.body.length > 100 ? note.body.substring(0, 100) + '...' : note.body) : '本文なし',
+    excerpt: note.body
+      ? note.body.length > 100
+        ? note.body.substring(0, 100) + "..."
+        : note.body
+      : "本文なし",
     publishedAt,
     likesCount: note.likeCount || note.like_count || 0,
     commentsCount: note.commentsCount || note.comment_count || 0,
     user: username || user.nickname || "",
-    url: `https://note.com/${username || user.urlname || 'unknown'}/n/${note.key || ''}`,
+    url: `https://note.com/${username || user.urlname || "unknown"}/n/${note.key || ""}`,
     status: note.status || "",
     isDraft: note.status === "draft",
     format: note.format || "",
-    editUrl: `https://note.com/${username || user.urlname || 'unknown'}/n/${note.key || ''}/edit`,
+    editUrl: `https://note.com/${username || user.urlname || "unknown"}/n/${note.key || ""}/edit`,
     hasDraftContent: Boolean(note.noteDraft),
     lastUpdated: note.noteDraft?.updatedAt || note.createdAt || "",
 
@@ -59,15 +79,21 @@ export function formatNote(
       imageCount,
       hasVideo: note.type === "MovieNote" || Boolean(note.external_url),
       externalUrl: note.external_url || null,
-      excerpt: note.body ? (note.body.length > 150 ? note.body.substring(0, 150) + '...' : note.body) : '',
+      excerpt: note.body
+        ? note.body.length > 150
+          ? note.body.substring(0, 150) + "..."
+          : note.body
+        : "",
       hasAudio: Boolean(note.audio),
       format: note.format || "unknown",
       highlightText: note.highlight || null,
       // 追加の詳細情報（analyzeContent=trueの場合のみ）
-      ...(analyzeContent ? {
-        bodyLength: note.body?.length || 0,
-        wordCount: note.body ? note.body.split(/\s+/).length : 0
-      } : {})
+      ...(analyzeContent
+        ? {
+            bodyLength: note.body?.length || 0,
+            wordCount: note.body ? note.body.split(/\s+/).length : 0,
+          }
+        : {}),
     },
 
     // 価格情報
@@ -77,7 +103,7 @@ export function formatNote(
       is_free: price === 0,
       has_multiple: false,
       has_subscription: false,
-      oneshot_lowest_price: price
+      oneshot_lowest_price: price,
     },
 
     // 設定情報
@@ -87,7 +113,7 @@ export function formatNote(
       disableComment: note.disable_comment || false,
       isRefund: note.is_refund || false,
       isMembershipConnected: note.is_membership_connected || false,
-      hasAvailableCirclePlans: note.has_available_circle_plans || false
+      hasAvailableCirclePlans: note.has_available_circle_plans || false,
     },
 
     // 著者情報（詳細オプション）
@@ -96,19 +122,21 @@ export function formatNote(
       name: user.name || user.nickname || "",
       urlname: user.urlname || "",
       profileImageUrl: user.user_profile_image_path || "",
-      details: includeUserDetails ? {
-        followerCount: user.follower_count || 0,
-        followingCount: user.following_count || 0,
-        noteCount: user.note_count || 0,
-        profile: user.profile || "",
-        twitterConnected: Boolean(user.twitter_nickname),
-        twitterNickname: user.twitter_nickname || null,
-        isOfficial: user.is_official || false,
-        hasCustomDomain: Boolean(user.custom_domain),
-        hasLikeAppeal: Boolean(user.like_appeal_text || user.like_appeal_image),
-        hasFollowAppeal: Boolean(user.follow_appeal_text)
-      } : null
-    }
+      details: includeUserDetails
+        ? {
+            followerCount: user.follower_count || 0,
+            followingCount: user.following_count || 0,
+            noteCount: user.note_count || 0,
+            profile: user.profile || "",
+            twitterConnected: Boolean(user.twitter_nickname),
+            twitterNickname: user.twitter_nickname || null,
+            isOfficial: user.is_official || false,
+            hasCustomDomain: Boolean(user.custom_domain),
+            hasLikeAppeal: Boolean(user.like_appeal_text || user.like_appeal_image),
+            hasFollowAppeal: Boolean(user.follow_appeal_text),
+          }
+        : null,
+    },
   };
 }
 
@@ -118,13 +146,13 @@ export function formatUser(user: NoteUser): FormattedUser {
     id: user.id || "",
     nickname: user.nickname || "",
     urlname: user.urlname || "",
-    bio: user.profile?.bio || user.bio || '',
+    bio: user.profile?.bio || user.bio || "",
     followersCount: user.followerCount || user.followersCount || 0,
     followingCount: user.followingCount || 0,
     notesCount: user.noteCount || user.notesCount || 0,
     magazinesCount: user.magazineCount || user.magazinesCount || 0,
-    url: `https://note.com/${user.urlname || ''}`,
-    profileImageUrl: user.profileImageUrl || ''
+    url: `https://note.com/${user.urlname || ""}`,
+    profileImageUrl: user.profileImageUrl || "",
   };
 }
 
@@ -134,7 +162,7 @@ export function formatComment(comment: Comment): FormattedComment {
     id: comment.id || "",
     body: comment.body || "",
     user: comment.user?.nickname || "匿名ユーザー",
-    publishedAt: comment.publishAt || ""
+    publishedAt: comment.publishAt || "",
   };
 }
 
@@ -143,7 +171,7 @@ export function formatLike(like: Like): FormattedLike {
   return {
     id: like.id || "",
     user: like.user?.nickname || "匿名ユーザー",
-    createdAt: like.createdAt || ""
+    createdAt: like.createdAt || "",
   };
 }
 
@@ -156,7 +184,7 @@ export function formatMagazine(magazine: Magazine): FormattedMagazine {
     notesCount: magazine.notesCount || 0,
     publishedAt: magazine.publishAt || "",
     user: magazine.user?.nickname || "匿名ユーザー",
-    url: `https://note.com/${magazine.user?.urlname || ''}/m/${magazine.key || ''}`
+    url: `https://note.com/${magazine.user?.urlname || ""}/m/${magazine.key || ""}`,
   };
 }
 
@@ -165,13 +193,18 @@ export function formatMembershipNote(note: any): FormattedMembershipNote {
   return {
     id: note.id || "",
     title: note.name || note.title || "",
-    excerpt: note.body ? (note.body.length > 100 ? note.body.substring(0, 100) + '...' : note.body) : '本文なし',
-    publishedAt: note.publishAt || note.published_at || note.createdAt || note.created_at || '日付不明',
+    excerpt: note.body
+      ? note.body.length > 100
+        ? note.body.substring(0, 100) + "..."
+        : note.body
+      : "本文なし",
+    publishedAt:
+      note.publishAt || note.published_at || note.createdAt || note.created_at || "日付不明",
     likesCount: note.likeCount || note.likes_count || 0,
     commentsCount: note.commentsCount || note.comments_count || 0,
     user: note.user?.nickname || note.creator?.nickname || "",
-    url: note.url || (note.user ? `https://note.com/${note.user.urlname}/n/${note.key || ''}` : ''),
-    isMembersOnly: note.is_members_only || note.isMembersOnly || true
+    url: note.url || (note.user ? `https://note.com/${note.user.urlname}/n/${note.key || ""}` : ""),
+    isMembersOnly: note.is_members_only || note.isMembersOnly || true,
   };
 }
 
@@ -194,10 +227,10 @@ export function formatMembershipSummary(summary: any): MembershipSummary {
       id: owner.id || "",
       nickname: owner.nickname || "",
       urlname: owner.urlname || "",
-      profileImageUrl: owner.userProfileImagePath || ""
+      profileImageUrl: owner.userProfileImagePath || "",
     },
     plans: planNames,
-    joinedAt: circle.joinedAt || ""
+    joinedAt: circle.joinedAt || "",
   };
 }
 
@@ -219,9 +252,9 @@ export function formatMembershipPlan(plan: any): MembershipPlan {
     ownerName: owner.nickname || owner.name || "",
     headerImagePath: plan.headerImagePath || circle.headerImagePath || "",
     plans: circlePlans.map((p: any) => p.name || "").filter((n: string) => n),
-    url: owner.customDomain ?
-      `https://${owner.customDomain.host}/membership` :
-      `https://note.com/${owner.urlname || ""}/membership`
+    url: owner.customDomain
+      ? `https://${owner.customDomain.host}/membership`
+      : `https://note.com/${owner.urlname || ""}/membership`,
   };
 }
 
@@ -234,36 +267,52 @@ export function analyzeNotes(formattedNotes: FormattedNote[], query: string, sor
     sort,
     // エンゲージメント分析
     engagementAnalysis: {
-      averageLikes: formattedNotes.reduce((sum, note) => sum + note.likesCount, 0) / formattedNotes.length || 0,
-      averageComments: formattedNotes.reduce((sum, note) => sum + (note.commentsCount || 0), 0) / formattedNotes.length || 0,
-      maxLikes: Math.max(...formattedNotes.map(note => note.likesCount)),
-      maxComments: Math.max(...formattedNotes.map(note => note.commentsCount || 0))
+      averageLikes:
+        formattedNotes.reduce((sum, note) => sum + note.likesCount, 0) / formattedNotes.length || 0,
+      averageComments:
+        formattedNotes.reduce((sum, note) => sum + (note.commentsCount || 0), 0) /
+          formattedNotes.length || 0,
+      maxLikes: Math.max(...formattedNotes.map((note) => note.likesCount)),
+      maxComments: Math.max(...formattedNotes.map((note) => note.commentsCount || 0)),
     },
     // コンテンツタイプ分析
     contentTypeAnalysis: {
-      withEyecatch: formattedNotes.filter(note => note.contentAnalysis?.hasEyecatch).length,
-      withVideo: formattedNotes.filter(note => note.contentAnalysis?.hasVideo).length,
-      withAudio: formattedNotes.filter(note => note.contentAnalysis?.hasAudio).length,
-      averageImageCount: formattedNotes.reduce((sum, note) => sum + (note.contentAnalysis?.imageCount || 0), 0) / formattedNotes.length || 0
+      withEyecatch: formattedNotes.filter((note) => note.contentAnalysis?.hasEyecatch).length,
+      withVideo: formattedNotes.filter((note) => note.contentAnalysis?.hasVideo).length,
+      withAudio: formattedNotes.filter((note) => note.contentAnalysis?.hasAudio).length,
+      averageImageCount:
+        formattedNotes.reduce((sum, note) => sum + (note.contentAnalysis?.imageCount || 0), 0) /
+          formattedNotes.length || 0,
     },
     // 価格分析
     priceAnalysis: {
-      free: formattedNotes.filter(note => !note.isPaid).length,
-      paid: formattedNotes.filter(note => note.isPaid).length,
-      averagePrice: formattedNotes.filter(note => note.isPaid).reduce((sum, note) => sum + (note.price || 0), 0) /
-        formattedNotes.filter(note => note.isPaid).length || 0,
-      maxPrice: Math.max(...formattedNotes.map(note => note.price || 0)),
-      minPrice: Math.min(...formattedNotes.filter(note => note.isPaid).map(note => note.price || 0)) || 0
+      free: formattedNotes.filter((note) => !note.isPaid).length,
+      paid: formattedNotes.filter((note) => note.isPaid).length,
+      averagePrice:
+        formattedNotes
+          .filter((note) => note.isPaid)
+          .reduce((sum, note) => sum + (note.price || 0), 0) /
+          formattedNotes.filter((note) => note.isPaid).length || 0,
+      maxPrice: Math.max(...formattedNotes.map((note) => note.price || 0)),
+      minPrice:
+        Math.min(...formattedNotes.filter((note) => note.isPaid).map((note) => note.price || 0)) ||
+        0,
     },
     // 著者分析
     authorAnalysis: {
-      uniqueAuthors: [...new Set(formattedNotes.map(note => note.author?.id))].length,
-      averageFollowers: formattedNotes.reduce((sum, note) => sum + (note.author?.details?.followerCount || 0), 0) / formattedNotes.length || 0,
-      maxFollowers: Math.max(...formattedNotes.map(note => note.author?.details?.followerCount || 0)),
-      officialAccounts: formattedNotes.filter(note => note.author?.details?.isOfficial).length,
-      withTwitterConnection: formattedNotes.filter(note => note.author?.details?.twitterConnected).length,
-      withCustomEngagement: formattedNotes.filter(note =>
-        note.author?.details?.hasLikeAppeal || note.author?.details?.hasFollowAppeal).length
-    }
+      uniqueAuthors: [...new Set(formattedNotes.map((note) => note.author?.id))].length,
+      averageFollowers:
+        formattedNotes.reduce((sum, note) => sum + (note.author?.details?.followerCount || 0), 0) /
+          formattedNotes.length || 0,
+      maxFollowers: Math.max(
+        ...formattedNotes.map((note) => note.author?.details?.followerCount || 0)
+      ),
+      officialAccounts: formattedNotes.filter((note) => note.author?.details?.isOfficial).length,
+      withTwitterConnection: formattedNotes.filter((note) => note.author?.details?.twitterConnected)
+        .length,
+      withCustomEngagement: formattedNotes.filter(
+        (note) => note.author?.details?.hasLikeAppeal || note.author?.details?.hasFollowAppeal
+      ).length,
+    },
   };
 }

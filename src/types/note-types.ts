@@ -40,13 +40,15 @@ export interface FormattedNote {
   title: string;
   excerpt?: string;
   body?: string;
-  user: string | {
-    id?: string;
-    name?: string;
-    nickname?: string;
-    urlname?: string;
-    bio?: string;
-  };
+  user:
+    | string
+    | {
+        id?: string;
+        name?: string;
+        nickname?: string;
+        urlname?: string;
+        bio?: string;
+      };
   publishedAt: string;
   likesCount: number;
   commentsCount?: number;
@@ -123,11 +125,13 @@ export interface Comment {
 export interface FormattedComment {
   id: string;
   body: string;
-  user: string | {
-    id?: string;
-    nickname?: string;
-    urlname?: string;
-  };
+  user:
+    | string
+    | {
+        id?: string;
+        nickname?: string;
+        urlname?: string;
+      };
   publishedAt: string;
 }
 
@@ -139,10 +143,12 @@ export interface Like {
 
 export interface FormattedLike {
   id: string;
-  user: string | {
-    id?: string;
-    nickname?: string;
-    urlname?: string;
-  };
+  user:
+    | string
+    | {
+        id?: string;
+        nickname?: string;
+        urlname?: string;
+      };
   createdAt: string;
 }

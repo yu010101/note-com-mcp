@@ -51,11 +51,13 @@ export interface FormattedMembershipNote {
   publishedAt: string;
   likesCount: number;
   commentsCount: number;
-  user: string | {
-    id?: string;
-    nickname?: string;
-    urlname?: string;
-  };
+  user:
+    | string
+    | {
+        id?: string;
+        nickname?: string;
+        urlname?: string;
+      };
   url: string;
   isMembersOnly: boolean;
 }

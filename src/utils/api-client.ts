@@ -13,13 +13,18 @@ export async function noteApiRequest(
   customHeaders?: { [key: string]: string }
 ): Promise<NoteApiResponse> {
   const headers: { [key: string]: string } = {
-    ...DEFAULT_HEADERS
+    ...DEFAULT_HEADERS,
   };
 
   // 認証ヘッダーを追加
   if (requireAuth || hasAuth()) {
     const authHeaders = buildAuthHeaders();
-    if (requireAuth && Object.keys(authHeaders).length === 0 && env.NOTE_EMAIL && env.NOTE_PASSWORD) {
+    if (
+      requireAuth &&
+      Object.keys(authHeaders).length === 0 &&
+      env.NOTE_EMAIL &&
+      env.NOTE_PASSWORD
+    ) {
       // 認証情報が必要で、メールアドレスとパスワードが設定されている場合はログイン試行
       const loggedIn = await loginToNote();
       if (loggedIn) {
@@ -80,12 +85,16 @@ export async function noteApiRequest(
       }
 
       if (env.DEBUG) {
-        console.error(`API error on endpoint ${endpoint}: ${response.status} ${response.statusText}`);
+        console.error(
+          `API error on endpoint ${endpoint}: ${response.status} ${response.statusText}`
+        );
         console.error(`API error response body: ${errorText}`);
 
         // エンドポイントのバージョンをチェック
         if (endpoint.includes("/v1/") || endpoint.includes("/v3/")) {
-          console.error(`Note: This endpoint uses API version ${endpoint.includes("/v1/") ? "v1" : "v3"}. Consider trying v2 version if available.`);
+          console.error(
+            `Note: This endpoint uses API version ${endpoint.includes("/v1/") ? "v1" : "v3"}. Consider trying v2 version if available.`
+          );
           if (endpoint.includes("/v3/notes/")) {
             const altPath = endpoint.replace("/v3/notes/", "/v2/notes/");
             console.error(`Alternative endpoint suggestion: ${altPath}`);
@@ -98,9 +107,13 @@ export async function noteApiRequest(
 
       // エラー種別ごとの詳細な説明
       if (response.status === 401 || response.status === 403) {
-        throw new Error("認証エラー: noteへのアクセス権限がありません。認証情報を確認してください。");
+        throw new Error(
+          "認証エラー: noteへのアクセス権限がありません。認証情報を確認してください。"
+        );
       } else if (response.status === 404) {
-        console.error(`404 Not Found: エンドポイント ${endpoint} が存在しないか、変更された可能性があります。APIバージョンを確認してください。`);
+        console.error(
+          `404 Not Found: エンドポイント ${endpoint} が存在しないか、変更された可能性があります。APIバージョンを確認してください。`
+        );
       } else if (response.status === 400) {
         console.error(`400 Bad Request: リクエストパラメータが不正な可能性があります。`);
       }
@@ -108,7 +121,7 @@ export async function noteApiRequest(
       throw new Error(`API error: ${response.status} ${response.statusText} - ${errorText}`);
     }
 
-    const data = await response.json() as NoteApiResponse;
+    const data = (await response.json()) as NoteApiResponse;
     return data;
   } catch (error) {
     if (env.DEBUG) {

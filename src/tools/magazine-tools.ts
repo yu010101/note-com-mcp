@@ -2,10 +2,10 @@ import { z } from "zod";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { noteApiRequest } from "../utils/api-client.js";
 import { formatMagazine } from "../utils/formatters.js";
-import { 
-  createSuccessResponse, 
+import {
+  createSuccessResponse,
   createAuthErrorResponse,
-  handleApiError 
+  handleApiError,
 } from "../utils/error-handler.js";
 import { hasAuth } from "../utils/auth.js";
 
@@ -37,7 +37,7 @@ export function registerMagazineTools(server: McpServer) {
     "マガジンに記事を追加する",
     {
       magazineId: z.string().describe("マガジンID（例: mxxxx）"),
-      noteId: z.string().describe("記事ID（例: nxxxx）")
+      noteId: z.string().describe("記事ID（例: nxxxx）"),
     },
     async ({ magazineId, noteId }) => {
       try {
@@ -45,11 +45,16 @@ export function registerMagazineTools(server: McpServer) {
           return createAuthErrorResponse();
         }
 
-        const data = await noteApiRequest(`/v1/our/magazines/${magazineId}/notes`, "POST", { id: noteId }, true);
-        
+        const data = await noteApiRequest(
+          `/v1/our/magazines/${magazineId}/notes`,
+          "POST",
+          { id: noteId },
+          true
+        );
+
         return createSuccessResponse({
           message: "マガジンに記事を追加しました",
-          data: data
+          data: data,
         });
       } catch (error) {
         return handleApiError(error, "マガジンへの記事追加");
@@ -63,7 +68,7 @@ export function registerMagazineTools(server: McpServer) {
     "マガジンから記事を削除する",
     {
       magazineId: z.string().describe("マガジンID"),
-      noteId: z.string().describe("記事ID")
+      noteId: z.string().describe("記事ID"),
     },
     async ({ magazineId, noteId }) => {
       try {
@@ -71,11 +76,16 @@ export function registerMagazineTools(server: McpServer) {
           return createAuthErrorResponse();
         }
 
-        const data = await noteApiRequest(`/v1/our/magazines/${magazineId}/notes/${noteId}`, "DELETE", null, true);
-        
+        const data = await noteApiRequest(
+          `/v1/our/magazines/${magazineId}/notes/${noteId}`,
+          "DELETE",
+          null,
+          true
+        );
+
         return createSuccessResponse({
           message: "マガジンから記事を削除しました",
-          data: data
+          data: data,
         });
       } catch (error) {
         return handleApiError(error, "マガジンからの記事削除");

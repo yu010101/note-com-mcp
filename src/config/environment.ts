@@ -7,8 +7,8 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 // 環境変数を読み込む（ビルドディレクトリを考慮）
-dotenv.config({ path: path.resolve(__dirname, '../../.env') });
-dotenv.config({ path: path.resolve(__dirname, '../.env') });
+dotenv.config({ path: path.resolve(__dirname, "../../.env") });
+dotenv.config({ path: path.resolve(__dirname, "../.env") });
 
 export interface Environment {
   DEBUG: boolean;
@@ -40,7 +40,11 @@ export const env: Environment = {
 export const authStatus = {
   hasCookie: env.NOTE_SESSION_V5 !== "" || env.NOTE_XSRF_TOKEN !== "",
   hasGqlToken: env.NOTE_GQL_AUTH_TOKEN !== "",
-  anyAuth: env.NOTE_SESSION_V5 !== "" || env.NOTE_XSRF_TOKEN !== "" || env.NOTE_GQL_AUTH_TOKEN !== "" || (env.NOTE_EMAIL !== "" && env.NOTE_PASSWORD !== "")
+  anyAuth:
+    env.NOTE_SESSION_V5 !== "" ||
+    env.NOTE_XSRF_TOKEN !== "" ||
+    env.NOTE_GQL_AUTH_TOKEN !== "" ||
+    (env.NOTE_EMAIL !== "" && env.NOTE_PASSWORD !== ""),
 };
 
 // デバッグログ

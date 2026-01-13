@@ -14,7 +14,11 @@ import { loginToNote, getActiveSessionCookie } from "./utils/auth.js";
 import { noteApiRequest } from "./utils/api-client.js";
 import { buildAuthHeaders, hasAuth } from "./utils/auth.js";
 import { convertMarkdownToNoteHtml } from "./utils/markdown-converter.js";
-import { refreshSessionWithPlaywright, getStorageStatePath, hasStorageState } from "./utils/playwright-session.js";
+import {
+  refreshSessionWithPlaywright,
+  getStorageStatePath,
+  hasStorageState,
+} from "./utils/playwright-session.js";
 import { formatNote } from "./utils/formatters.js";
 import { parseMarkdown, formatToNoteEditor } from "./utils/note-editor-formatter.js";
 
@@ -37,7 +41,9 @@ const sessions = new Map<string, any>();
 
 let requestSequence = 0;
 
-function sanitizeHeaders(headers: IncomingHttpHeaders): Record<string, string | string[] | undefined> {
+function sanitizeHeaders(
+  headers: IncomingHttpHeaders
+): Record<string, string | string[] | undefined> {
   const sanitized: Record<string, string | string[] | undefined> = {};
   for (const [key, value] of Object.entries(headers)) {
     const lowerKey = key.toLowerCase();
@@ -62,10 +68,10 @@ async function getToolsList() {
         properties: {
           query: { type: "string", description: "検索キーワード" },
           size: { type: "number", description: "取得件数（1-100）", default: 10 },
-          sort: { type: "string", description: "ソート順（new/created/like）", default: "new" }
+          sort: { type: "string", description: "ソート順（new/created/like）", default: "new" },
         },
-        required: ["query"]
-      }
+        required: ["query"],
+      },
     },
     {
       name: "get-note",
@@ -73,10 +79,10 @@ async function getToolsList() {
       inputSchema: {
         type: "object",
         properties: {
-          noteId: { type: "string", description: "記事ID（例: n4f0c7b884789）" }
+          noteId: { type: "string", description: "記事ID（例: n4f0c7b884789）" },
         },
-        required: ["noteId"]
-      }
+        required: ["noteId"],
+      },
     },
     {
       name: "analyze-notes",
@@ -85,17 +91,42 @@ async function getToolsList() {
         type: "object",
         properties: {
           query: { type: "string", description: "検索キーワード" },
-          size: { type: "number", description: "取得する件数（分析に十分なデータ量を確保するため、初期値は多め）", default: 20 },
+          size: {
+            type: "number",
+            description: "取得する件数（分析に十分なデータ量を確保するため、初期値は多め）",
+            default: 20,
+          },
           start: { type: "number", description: "検索結果の開始位置", default: 0 },
-          sort: { type: "string", enum: ["new", "popular", "hot"], description: "ソート順（new: 新着順, popular: 人気順, hot: 急上昇）", default: "popular" },
-          includeUserDetails: { type: "boolean", description: "著者情報を詳細に含めるかどうか", default: true },
-          analyzeContent: { type: "boolean", description: "コンテンツの特徴（画像数、アイキャッチの有無など）を分析するか", default: true },
+          sort: {
+            type: "string",
+            enum: ["new", "popular", "hot"],
+            description: "ソート順（new: 新着順, popular: 人気順, hot: 急上昇）",
+            default: "popular",
+          },
+          includeUserDetails: {
+            type: "boolean",
+            description: "著者情報を詳細に含めるかどうか",
+            default: true,
+          },
+          analyzeContent: {
+            type: "boolean",
+            description: "コンテンツの特徴（画像数、アイキャッチの有無など）を分析するか",
+            default: true,
+          },
           category: { type: "string", description: "特定のカテゴリに絞り込む（オプション）" },
-          dateRange: { type: "string", description: "日付範囲で絞り込む（例: 7d=7日以内、2m=2ヶ月以内）" },
-          priceRange: { type: "string", enum: ["all", "free", "paid"], description: "価格帯（all: 全て, free: 無料のみ, paid: 有料のみ）", default: "all" }
+          dateRange: {
+            type: "string",
+            description: "日付範囲で絞り込む（例: 7d=7日以内、2m=2ヶ月以内）",
+          },
+          priceRange: {
+            type: "string",
+            enum: ["all", "free", "paid"],
+            description: "価格帯（all: 全て, free: 無料のみ, paid: 有料のみ）",
+            default: "all",
+          },
         },
-        required: ["query"]
-      }
+        required: ["query"],
+      },
     },
     {
       name: "search-users",
@@ -104,10 +135,10 @@ async function getToolsList() {
         type: "object",
         properties: {
           query: { type: "string", description: "検索キーワード" },
-          size: { type: "number", description: "取得件数", default: 10 }
+          size: { type: "number", description: "取得件数", default: 10 },
         },
-        required: ["query"]
-      }
+        required: ["query"],
+      },
     },
     {
       name: "get-user",
@@ -115,10 +146,10 @@ async function getToolsList() {
       inputSchema: {
         type: "object",
         properties: {
-          userId: { type: "string", description: "ユーザーID" }
+          userId: { type: "string", description: "ユーザーID" },
         },
-        required: ["userId"]
-      }
+        required: ["userId"],
+      },
     },
     {
       name: "get-user-notes",
@@ -127,14 +158,15 @@ async function getToolsList() {
         type: "object",
         properties: {
           userId: { type: "string", description: "ユーザーID" },
-          size: { type: "number", description: "取得件数", default: 10 }
+          size: { type: "number", description: "取得件数", default: 10 },
         },
-        required: ["userId"]
-      }
+        required: ["userId"],
+      },
     },
     {
       name: "post-draft-note",
-      description: "note.comに下書き記事を投稿（Markdown形式の本文を自動でHTMLに変換、アイキャッチ画像も設定可能）",
+      description:
+        "note.comに下書き記事を投稿（Markdown形式の本文を自動でHTMLに変換、アイキャッチ画像も設定可能）",
       inputSchema: {
         type: "object",
         properties: {
@@ -147,23 +179,27 @@ async function getToolsList() {
             properties: {
               fileName: { type: "string", description: "ファイル名（例: eyecatch.png）" },
               base64: { type: "string", description: "Base64エンコードされた画像データ" },
-              mimeType: { type: "string", description: "MIMEタイプ（例: image/png）" }
+              mimeType: { type: "string", description: "MIMEタイプ（例: image/png）" },
             },
             required: ["fileName", "base64"],
-            description: "アイキャッチ画像（Base64エンコード）"
-          }
+            description: "アイキャッチ画像（Base64エンコード）",
+          },
         },
-        required: ["title", "body"]
-      }
+        required: ["title", "body"],
+      },
     },
     {
       name: "post-draft-note-with-images",
-      description: "画像付きの下書き記事を作成する（Playwrightなし、API経由で画像を本文に挿入、アイキャッチ設定可能）",
+      description:
+        "画像付きの下書き記事を作成する（Playwrightなし、API経由で画像を本文に挿入、アイキャッチ設定可能）",
       inputSchema: {
         type: "object",
         properties: {
           title: { type: "string", description: "記事タイトル" },
-          body: { type: "string", description: "記事本文（Markdown形式、![[image.png]]形式の画像参照を含む）" },
+          body: {
+            type: "string",
+            description: "記事本文（Markdown形式、![[image.png]]形式の画像参照を含む）",
+          },
           images: {
             type: "array",
             items: {
@@ -171,11 +207,11 @@ async function getToolsList() {
               properties: {
                 fileName: { type: "string", description: "ファイル名（例: image.png）" },
                 base64: { type: "string", description: "Base64エンコードされた画像データ" },
-                mimeType: { type: "string", description: "MIMEタイプ（例: image/png）" }
+                mimeType: { type: "string", description: "MIMEタイプ（例: image/png）" },
               },
-              required: ["fileName", "base64"]
+              required: ["fileName", "base64"],
             },
-            description: "Base64エンコードされた画像の配列"
+            description: "Base64エンコードされた画像の配列",
           },
           tags: { type: "array", items: { type: "string" }, description: "タグ（最大10個）" },
           id: { type: "string", description: "既存の下書きID（更新する場合）" },
@@ -184,14 +220,14 @@ async function getToolsList() {
             properties: {
               fileName: { type: "string", description: "ファイル名（例: eyecatch.png）" },
               base64: { type: "string", description: "Base64エンコードされた画像データ" },
-              mimeType: { type: "string", description: "MIMEタイプ（例: image/png）" }
+              mimeType: { type: "string", description: "MIMEタイプ（例: image/png）" },
             },
             required: ["fileName", "base64"],
-            description: "アイキャッチ画像（Base64エンコード）"
-          }
+            description: "アイキャッチ画像（Base64エンコード）",
+          },
         },
-        required: ["title", "body"]
-      }
+        required: ["title", "body"],
+      },
     },
     {
       name: "edit-note",
@@ -203,10 +239,10 @@ async function getToolsList() {
           title: { type: "string", description: "記事タイトル" },
           body: { type: "string", description: "記事本文" },
           tags: { type: "array", items: { type: "string" }, description: "タグ（最大10個）" },
-          isDraft: { type: "boolean", description: "下書き状態", default: true }
+          isDraft: { type: "boolean", description: "下書き状態", default: true },
         },
-        required: ["id", "title", "body"]
-      }
+        required: ["id", "title", "body"],
+      },
     },
     {
       name: "get-my-notes",
@@ -215,10 +251,10 @@ async function getToolsList() {
         type: "object",
         properties: {
           size: { type: "number", description: "取得件数", default: 10 },
-          includeDrafts: { type: "boolean", description: "下書きを含める", default: true }
+          includeDrafts: { type: "boolean", description: "下書きを含める", default: true },
         },
-        required: []
-      }
+        required: [],
+      },
     },
     {
       name: "upload-image",
@@ -226,12 +262,21 @@ async function getToolsList() {
       inputSchema: {
         type: "object",
         properties: {
-          imagePath: { type: "string", description: "アップロードする画像ファイルのパス（ローカルファイル）" },
-          imageUrl: { type: "string", description: "アップロードする画像のURL（imagePathの代わりに使用可能）" },
-          imageBase64: { type: "string", description: "Base64エンコードされた画像データ（imagePathの代わりに使用可能）" }
+          imagePath: {
+            type: "string",
+            description: "アップロードする画像ファイルのパス（ローカルファイル）",
+          },
+          imageUrl: {
+            type: "string",
+            description: "アップロードする画像のURL（imagePathの代わりに使用可能）",
+          },
+          imageBase64: {
+            type: "string",
+            description: "Base64エンコードされた画像データ（imagePathの代わりに使用可能）",
+          },
         },
-        required: []
-      }
+        required: [],
+      },
     },
     {
       name: "upload-images-batch",
@@ -239,10 +284,14 @@ async function getToolsList() {
       inputSchema: {
         type: "object",
         properties: {
-          imagePaths: { type: "array", items: { type: "string" }, description: "アップロードする画像ファイルのパスの配列" }
+          imagePaths: {
+            type: "array",
+            items: { type: "string" },
+            description: "アップロードする画像ファイルのパスの配列",
+          },
         },
-        required: ["imagePaths"]
-      }
+        required: ["imagePaths"],
+      },
     },
     {
       name: "get-comments",
@@ -251,10 +300,10 @@ async function getToolsList() {
         type: "object",
         properties: {
           noteId: { type: "string", description: "記事ID" },
-          size: { type: "number", description: "取得件数", default: 10 }
+          size: { type: "number", description: "取得件数", default: 10 },
         },
-        required: ["noteId"]
-      }
+        required: ["noteId"],
+      },
     },
     {
       name: "post-comment",
@@ -263,10 +312,10 @@ async function getToolsList() {
         type: "object",
         properties: {
           noteId: { type: "string", description: "記事ID" },
-          comment: { type: "string", description: "コメント内容" }
+          comment: { type: "string", description: "コメント内容" },
         },
-        required: ["noteId", "comment"]
-      }
+        required: ["noteId", "comment"],
+      },
     },
     {
       name: "like-note",
@@ -274,10 +323,10 @@ async function getToolsList() {
       inputSchema: {
         type: "object",
         properties: {
-          noteId: { type: "string", description: "記事ID" }
+          noteId: { type: "string", description: "記事ID" },
         },
-        required: ["noteId"]
-      }
+        required: ["noteId"],
+      },
     },
     {
       name: "unlike-note",
@@ -285,10 +334,10 @@ async function getToolsList() {
       inputSchema: {
         type: "object",
         properties: {
-          noteId: { type: "string", description: "記事ID" }
+          noteId: { type: "string", description: "記事ID" },
         },
-        required: ["noteId"]
-      }
+        required: ["noteId"],
+      },
     },
     {
       name: "search-magazines",
@@ -297,10 +346,10 @@ async function getToolsList() {
         type: "object",
         properties: {
           query: { type: "string", description: "検索キーワード" },
-          size: { type: "number", description: "取得件数", default: 10 }
+          size: { type: "number", description: "取得件数", default: 10 },
         },
-        required: ["query"]
-      }
+        required: ["query"],
+      },
     },
     {
       name: "get-magazine",
@@ -308,10 +357,10 @@ async function getToolsList() {
       inputSchema: {
         type: "object",
         properties: {
-          magazineId: { type: "string", description: "マガジンID" }
+          magazineId: { type: "string", description: "マガジンID" },
         },
-        required: ["magazineId"]
-      }
+        required: ["magazineId"],
+      },
     },
     {
       name: "list-categories",
@@ -319,8 +368,8 @@ async function getToolsList() {
       inputSchema: {
         type: "object",
         properties: {},
-        required: []
-      }
+        required: [],
+      },
     },
     {
       name: "list-hashtags",
@@ -328,8 +377,8 @@ async function getToolsList() {
       inputSchema: {
         type: "object",
         properties: {},
-        required: []
-      }
+        required: [],
+      },
     },
     {
       name: "get-stats",
@@ -337,10 +386,10 @@ async function getToolsList() {
       inputSchema: {
         type: "object",
         properties: {
-          noteId: { type: "string", description: "記事ID" }
+          noteId: { type: "string", description: "記事ID" },
         },
-        required: ["noteId"]
-      }
+        required: ["noteId"],
+      },
     },
     {
       name: "get-membership-summaries",
@@ -348,8 +397,8 @@ async function getToolsList() {
       inputSchema: {
         type: "object",
         properties: {},
-        required: []
-      }
+        required: [],
+      },
     },
     {
       name: "get-membership-plans",
@@ -357,8 +406,8 @@ async function getToolsList() {
       inputSchema: {
         type: "object",
         properties: {},
-        required: []
-      }
+        required: [],
+      },
     },
     {
       name: "get-membership-notes",
@@ -366,10 +415,10 @@ async function getToolsList() {
       inputSchema: {
         type: "object",
         properties: {
-          size: { type: "number", description: "取得件数", default: 10 }
+          size: { type: "number", description: "取得件数", default: 10 },
         },
-        required: []
-      }
+        required: [],
+      },
     },
     {
       name: "get-circle-info",
@@ -377,10 +426,10 @@ async function getToolsList() {
       inputSchema: {
         type: "object",
         properties: {
-          circleId: { type: "string", description: "サークルID" }
+          circleId: { type: "string", description: "サークルID" },
         },
-        required: ["circleId"]
-      }
+        required: ["circleId"],
+      },
     },
     {
       name: "get-notice-counts",
@@ -388,8 +437,8 @@ async function getToolsList() {
       inputSchema: {
         type: "object",
         properties: {},
-        required: []
-      }
+        required: [],
+      },
     },
     {
       name: "search-all",
@@ -399,10 +448,10 @@ async function getToolsList() {
         properties: {
           query: { type: "string", description: "検索キーワード" },
           size: { type: "number", description: "取得件数", default: 10 },
-          sort: { type: "string", description: "ソート順", default: "new" }
+          sort: { type: "string", description: "ソート順", default: "new" },
         },
-        required: ["query"]
-      }
+        required: ["query"],
+      },
     },
     {
       name: "publish-from-obsidian",
@@ -411,13 +460,16 @@ async function getToolsList() {
         type: "object",
         properties: {
           markdownPath: { type: "string", description: "Markdownファイルのパス" },
-          imageBasePath: { type: "string", description: "画像ファイルの基準パス（デフォルト: Markdownファイルと同じディレクトリ）" },
+          imageBasePath: {
+            type: "string",
+            description: "画像ファイルの基準パス（デフォルト: Markdownファイルと同じディレクトリ）",
+          },
           tags: { type: "array", items: { type: "string" }, description: "タグ（最大10個）" },
           headless: { type: "boolean", description: "ヘッドレスモードで実行", default: false },
-          saveAsDraft: { type: "boolean", description: "下書きとして保存", default: true }
+          saveAsDraft: { type: "boolean", description: "下書きとして保存", default: true },
         },
-        required: ["markdownPath"]
-      }
+        required: ["markdownPath"],
+      },
     },
     {
       name: "publish-from-obsidian-remote",
@@ -432,10 +484,10 @@ async function getToolsList() {
             properties: {
               fileName: { type: "string", description: "ファイル名（例: eyecatch.png）" },
               base64: { type: "string", description: "Base64エンコードされた画像データ" },
-              mimeType: { type: "string", description: "MIMEタイプ（例: image/png）" }
+              mimeType: { type: "string", description: "MIMEタイプ（例: image/png）" },
             },
             required: ["fileName", "base64"],
-            description: "アイキャッチ画像（フロントマターのeyecatchフィールドから取得）"
+            description: "アイキャッチ画像（フロントマターのeyecatchフィールドから取得）",
           },
           images: {
             type: "array",
@@ -444,18 +496,18 @@ async function getToolsList() {
               properties: {
                 fileName: { type: "string", description: "ファイル名（例: image.png）" },
                 base64: { type: "string", description: "Base64エンコードされた画像データ" },
-                mimeType: { type: "string", description: "MIMEタイプ（例: image/png）" }
+                mimeType: { type: "string", description: "MIMEタイプ（例: image/png）" },
               },
-              required: ["fileName", "base64"]
+              required: ["fileName", "base64"],
             },
-            description: "本文中の画像の配列（現在は未使用、将来の拡張用）"
+            description: "本文中の画像の配列（現在は未使用、将来の拡張用）",
           },
           tags: { type: "array", items: { type: "string" }, description: "タグ（最大10個）" },
           headless: { type: "boolean", description: "ヘッドレスモードで実行", default: true },
-          saveAsDraft: { type: "boolean", description: "下書きとして保存", default: true }
+          saveAsDraft: { type: "boolean", description: "下書きとして保存", default: true },
         },
-        required: ["title", "markdown"]
-      }
+        required: ["title", "markdown"],
+      },
     },
     {
       name: "insert-images-to-note",
@@ -463,21 +515,31 @@ async function getToolsList() {
       inputSchema: {
         type: "object",
         properties: {
-          imagePaths: { type: "array", items: { type: "string" }, description: "挿入する画像ファイルのパスの配列" },
-          noteId: { type: "string", description: "既存下書きのnoteIdまたはnoteKey（例: 12345 / n4f0c7b884789）" },
-          editUrl: { type: "string", description: "既存下書きの編集URL（例: https://editor.note.com/notes/nxxxx/edit/）" },
-          headless: { type: "boolean", description: "ヘッドレスモードで実行", default: false }
+          imagePaths: {
+            type: "array",
+            items: { type: "string" },
+            description: "挿入する画像ファイルのパスの配列",
+          },
+          noteId: {
+            type: "string",
+            description: "既存下書きのnoteIdまたはnoteKey（例: 12345 / n4f0c7b884789）",
+          },
+          editUrl: {
+            type: "string",
+            description: "既存下書きの編集URL（例: https://editor.note.com/notes/nxxxx/edit/）",
+          },
+          headless: { type: "boolean", description: "ヘッドレスモードで実行", default: false },
         },
-        required: ["imagePaths"]
-      }
-    }
+        required: ["imagePaths"],
+      },
+    },
   ];
 }
 
 /**
  * ◤◢◤◢◤◢◤◢◤◢◤◢◤◢
  * note API MCP Server (HTTP/SSE Transport)
- * 
+ *
  * Streamable HTTPトランスポート対応版
  * - Cursor、ChatGPT、OpenAI Responses APIからリモート接続可能
  * - SSE (Server-Sent Events) によるストリーミング対応
@@ -492,7 +554,7 @@ const HOST = env.MCP_HTTP_HOST || "127.0.0.1";
 // MCP サーバーインスタンスを作成
 const server = new McpServer({
   name: "note-api",
-  version: "2.1.0-http"
+  version: "2.1.0-http",
 });
 
 /**
@@ -520,9 +582,7 @@ async function initializeServer(): Promise<void> {
 function withTimeout<T>(promise: Promise<T>, timeoutMs: number, errorMessage: string): Promise<T> {
   return Promise.race([
     promise,
-    new Promise<T>((_, reject) =>
-      setTimeout(() => reject(new Error(errorMessage)), timeoutMs)
-    )
+    new Promise<T>((_, reject) => setTimeout(() => reject(new Error(errorMessage)), timeoutMs)),
   ]);
 }
 
@@ -553,7 +613,9 @@ async function performAuthentication(): Promise<void> {
         console.error("✅ loginToNote成功: セッションCookieを取得しました");
         authenticated = true;
       } else {
-        console.error("❌ loginToNote失敗: メールアドレスまたはパスワードが正しくない可能性があります");
+        console.error(
+          "❌ loginToNote失敗: メールアドレスまたはパスワードが正しくない可能性があります"
+        );
       }
     } catch (error: any) {
       console.error("⚠️ loginToNoteでエラー:", error.message);
@@ -596,7 +658,9 @@ async function performAuthentication(): Promise<void> {
   } else {
     console.error("⚠️  警告: 認証情報が設定されていません");
     console.error("👀 読み取り機能のみ利用可能です");
-    console.error("📝 投稿、コメント、スキなどの機能を使うには.envファイルに認証情報を設定してください");
+    console.error(
+      "📝 投稿、コメント、スキなどの機能を使うには.envファイルに認証情報を設定してください"
+    );
   }
   console.error("◤◢◤◢◤◢◤◢◤◢◤◢◤◢");
 }
@@ -626,7 +690,9 @@ async function startServer(): Promise<void> {
       const remotePort = req.socket.remotePort;
 
       console.error(`➡️ [HTTP ${requestId}] ${method} ${url} from ${remoteAddress}:${remotePort}`);
-      console.error(`   [HTTP ${requestId}] headers: ${JSON.stringify(sanitizeHeaders(req.headers))}`);
+      console.error(
+        `   [HTTP ${requestId}] headers: ${JSON.stringify(sanitizeHeaders(req.headers))}`
+      );
 
       req.on("aborted", () => {
         console.error(`🛑 [HTTP ${requestId}] req aborted`);
@@ -640,7 +706,9 @@ async function startServer(): Promise<void> {
 
       res.on("finish", () => {
         const durationMs = Date.now() - requestStartMs;
-        console.error(`⬅️ [HTTP ${requestId}] ${method} ${url} -> ${res.statusCode} (${durationMs}ms) finish`);
+        console.error(
+          `⬅️ [HTTP ${requestId}] ${method} ${url} -> ${res.statusCode} (${durationMs}ms) finish`
+        );
       });
       res.on("close", () => {
         const durationMs = Date.now() - requestStartMs;
@@ -665,13 +733,15 @@ async function startServer(): Promise<void> {
       // ヘルスチェックエンドポイント
       if (req.url === "/health" || req.url === "/") {
         res.writeHead(200, { "Content-Type": "application/json" });
-        res.end(JSON.stringify({
-          status: "ok",
-          server: "note-api-mcp",
-          version: "2.1.0-http",
-          transport: "SSE",
-          authenticated: authStatus.hasCookie || authStatus.anyAuth
-        }));
+        res.end(
+          JSON.stringify({
+            status: "ok",
+            server: "note-api-mcp",
+            version: "2.1.0-http",
+            transport: "SSE",
+            authenticated: authStatus.hasCookie || authStatus.anyAuth,
+          })
+        );
         return;
       }
 
@@ -686,7 +756,7 @@ async function startServer(): Promise<void> {
             "Access-Control-Allow-Methods": "GET, POST, OPTIONS, HEAD",
             "Access-Control-Allow-Headers": "Content-Type, Authorization, Accept",
             "Access-Control-Max-Age": "86400",
-            "Content-Length": "0"
+            "Content-Length": "0",
           });
           res.end();
           console.error("✅ OPTIONSプリフライトに応答");
@@ -723,7 +793,7 @@ async function startServer(): Promise<void> {
                 "Access-Control-Max-Age": "86400",
                 "Transfer-Encoding": "chunked",
                 "Cache-Control": "no-cache",
-                "Connection": "keep-alive"
+                Connection: "keep-alive",
               });
 
               // initializeリクエストを処理
@@ -731,7 +801,7 @@ async function startServer(): Promise<void> {
                 const sessionId = `session-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
                 sessions.set(sessionId, { initialized: true });
                 // グローバル初期化フラグを設定
-                sessions.set('initialized', true);
+                sessions.set("initialized", true);
 
                 const response = {
                   jsonrpc: "2.0",
@@ -740,20 +810,20 @@ async function startServer(): Promise<void> {
                     protocolVersion: "2025-06-18",
                     capabilities: {
                       tools: {
-                        listChanged: true
+                        listChanged: true,
                       },
                       prompts: {},
-                      resources: {}
+                      resources: {},
                     },
                     serverInfo: {
                       name: "note-api-mcp",
-                      version: "2.1.0-http"
-                    }
-                  }
+                      version: "2.1.0-http",
+                    },
+                  },
                 };
 
                 // HTTP streaming: 改行区切りでJSONを送信
-                res.write(JSON.stringify(response) + '\n');
+                res.write(JSON.stringify(response) + "\n");
                 res.end();
                 console.error("✅ Initializeレスポンスを送信しました (HTTP streaming)");
                 return;
@@ -766,14 +836,16 @@ async function startServer(): Promise<void> {
                   jsonrpc: "2.0",
                   id: message.id,
                   result: {
-                    tools: toolsList
-                  }
+                    tools: toolsList,
+                  },
                 };
 
                 // HTTP streaming: 改行区切りでJSONを送信
-                res.write(JSON.stringify(response) + '\n');
+                res.write(JSON.stringify(response) + "\n");
                 res.end();
-                console.error(`✅ Tools listレスポンスを送信しました (${toolsList.length}ツール) - HTTP streaming`);
+                console.error(
+                  `✅ Tools listレスポンスを送信しました (${toolsList.length}ツール) - HTTP streaming`
+                );
                 return;
               }
 
@@ -799,7 +871,9 @@ async function startServer(): Promise<void> {
                         normalizedSort = "popular";
                         console.error(`⚠️ sortパラメータ '${sort}' を 'popular' に変換`);
                       } else {
-                        throw new Error(`無効なsortパラメータ: ${sort}。有効な値: ${validSorts.join(", ")}`);
+                        throw new Error(
+                          `無効なsortパラメータ: ${sort}。有効な値: ${validSorts.join(", ")}`
+                        );
                       }
                     }
 
@@ -808,12 +882,13 @@ async function startServer(): Promise<void> {
                     const data = await noteApiRequest(searchUrl, "GET", null, true);
 
                     result = {
-                      content: [{
-                        type: "text",
-                        text: JSON.stringify(data, null, 2)
-                      }]
+                      content: [
+                        {
+                          type: "text",
+                          text: JSON.stringify(data, null, 2),
+                        },
+                      ],
                     };
-
                   } else if (name === "analyze-notes") {
                     // analyze-notesツールの実装
                     const {
@@ -825,7 +900,7 @@ async function startServer(): Promise<void> {
                       analyzeContent = true,
                       category,
                       dateRange,
-                      priceRange = "all"
+                      priceRange = "all",
                     } = args;
 
                     // パラメータ構築
@@ -833,7 +908,7 @@ async function startServer(): Promise<void> {
                       q: query,
                       size: size.toString(),
                       start: start.toString(),
-                      sort: sort
+                      sort: sort,
                     });
 
                     if (category) params.append("category", category);
@@ -852,7 +927,10 @@ async function startServer(): Promise<void> {
                     if (data?.data?.notes) {
                       if (Array.isArray(data.data.notes)) {
                         notesArray = data.data.notes;
-                      } else if (typeof data.data.notes === 'object' && (data.data.notes as any).contents) {
+                      } else if (
+                        typeof data.data.notes === "object" &&
+                        (data.data.notes as any).contents
+                      ) {
                         notesArray = (data.data.notes as any).contents;
                       }
                     }
@@ -867,23 +945,25 @@ async function startServer(): Promise<void> {
                         totalLikes: 0,
                         totalComments: 0,
                         averageLikes: 0,
-                        averageComments: 0
+                        averageComments: 0,
                       },
                       content: {
                         withImages: 0,
                         withEyecatch: 0,
                         averageBodyLength: 0,
-                        withTags: 0
+                        withTags: 0,
                       },
                       pricing: {
                         free: 0,
                         paid: 0,
-                        averagePrice: 0
+                        averagePrice: 0,
                       },
-                      topAuthors: [] as any[]
+                      topAuthors: [] as any[],
                     };
 
-                    const authorStats: { [key: string]: { count: number, name: string, urlname: string } } = {};
+                    const authorStats: {
+                      [key: string]: { count: number; name: string; urlname: string };
+                    } = {};
 
                     notesArray.forEach((note: any) => {
                       // エンゲージメント分析
@@ -895,13 +975,13 @@ async function startServer(): Promise<void> {
                       // コンテンツ分析
                       if (analyzeContent) {
                         if (note.eyecatch) analytics.content.withEyecatch++;
-                        if (note.body && note.body.includes('<img')) analytics.content.withImages++;
+                        if (note.body && note.body.includes("<img")) analytics.content.withImages++;
                         if (note.body) analytics.content.averageBodyLength += note.body.length;
                         if (note.hashtags && note.hashtags.length > 0) analytics.content.withTags++;
                       }
 
                       // 価格分析
-                      if (note.pricingType === 'free' || !note.price) {
+                      if (note.pricingType === "free" || !note.price) {
                         analytics.pricing.free++;
                       } else {
                         analytics.pricing.paid++;
@@ -914,8 +994,8 @@ async function startServer(): Promise<void> {
                         if (!authorStats[userId]) {
                           authorStats[userId] = {
                             count: 0,
-                            name: note.user.nickname || note.user.name || '',
-                            urlname: note.user.urlname || ''
+                            name: note.user.nickname || note.user.name || "",
+                            urlname: note.user.urlname || "",
                           };
                         }
                         authorStats[userId].count++;
@@ -924,11 +1004,15 @@ async function startServer(): Promise<void> {
 
                     // 平均値計算
                     if (notesArray.length > 0) {
-                      analytics.engagement.averageLikes = analytics.engagement.totalLikes / notesArray.length;
-                      analytics.engagement.averageComments = analytics.engagement.totalComments / notesArray.length;
-                      analytics.content.averageBodyLength = analytics.content.averageBodyLength / notesArray.length;
+                      analytics.engagement.averageLikes =
+                        analytics.engagement.totalLikes / notesArray.length;
+                      analytics.engagement.averageComments =
+                        analytics.engagement.totalComments / notesArray.length;
+                      analytics.content.averageBodyLength =
+                        analytics.content.averageBodyLength / notesArray.length;
                       if (analytics.pricing.paid > 0) {
-                        analytics.pricing.averagePrice = analytics.pricing.averagePrice / analytics.pricing.paid;
+                        analytics.pricing.averagePrice =
+                          analytics.pricing.averagePrice / analytics.pricing.paid;
                       }
                     }
 
@@ -939,30 +1023,35 @@ async function startServer(): Promise<void> {
                       .slice(0, 5);
 
                     result = {
-                      content: [{
-                        type: "text",
-                        text: JSON.stringify({
-                          analytics,
-                          notes: notesArray.slice(0, 10).map((note: any) => ({
-                            id: note.id,
-                            title: note.name || note.title,
-                            user: note.user?.nickname,
-                            likes: note.likeCount,
-                            comments: note.commentsCount,
-                            publishedAt: note.publishAt,
-                            url: `https://note.com/${note.user?.urlname}/n/${note.key}`
-                          }))
-                        }, null, 2)
-                      }]
+                      content: [
+                        {
+                          type: "text",
+                          text: JSON.stringify(
+                            {
+                              analytics,
+                              notes: notesArray.slice(0, 10).map((note: any) => ({
+                                id: note.id,
+                                title: note.name || note.title,
+                                user: note.user?.nickname,
+                                likes: note.likeCount,
+                                comments: note.commentsCount,
+                                publishedAt: note.publishAt,
+                                url: `https://note.com/${note.user?.urlname}/n/${note.key}`,
+                              })),
+                            },
+                            null,
+                            2
+                          ),
+                        },
+                      ],
                     };
-
                   } else if (name === "get-note") {
                     // get-noteツールの実装
                     const { noteId } = args;
 
                     // noteIdのバリデーション - 重複チェック
-                    if (!noteId || typeof noteId !== 'string') {
-                      throw new Error('noteIdは必須の文字列パラメータです');
+                    if (!noteId || typeof noteId !== "string") {
+                      throw new Error("noteIdは必須の文字列パラメータです");
                     }
 
                     // note.comの記事IDは通常20文字以内、重複は40文字以上になる
@@ -972,17 +1061,21 @@ async function startServer(): Promise<void> {
                       const firstHalf = noteId.substring(0, halfLength);
                       const secondHalf = noteId.substring(halfLength);
 
-                      console.error(`🔍 noteId重複チェック: ${noteId} (長さ: ${noteId.length}) -> 前半: ${firstHalf}, 後半: ${secondHalf}`);
+                      console.error(
+                        `🔍 noteId重複チェック: ${noteId} (長さ: ${noteId.length}) -> 前半: ${firstHalf}, 後半: ${secondHalf}`
+                      );
 
                       if (firstHalf === secondHalf) {
-                        console.error(`⚠️ noteIdが重複しています: ${noteId} -> ${firstHalf} に修正`);
+                        console.error(
+                          `⚠️ noteIdが重複しています: ${noteId} -> ${firstHalf} に修正`
+                        );
                         // 重複を除去して再試行
                         const correctedNoteId = firstHalf;
                         const data = await noteApiRequest(
                           `/v3/notes/${correctedNoteId}?${new URLSearchParams({
                             draft: "true",
                             draft_reedit: "false",
-                            ts: Date.now().toString()
+                            ts: Date.now().toString(),
                           }).toString()}`,
                           "GET",
                           null,
@@ -994,34 +1087,40 @@ async function startServer(): Promise<void> {
                         // formatNote関数を使って完全なレスポンスを生成
                         const formattedNote = formatNote(
                           noteData,
-                          noteData.user?.urlname || '',
+                          noteData.user?.urlname || "",
                           true, // includeUserDetails
-                          true  // analyzeContent
+                          true // analyzeContent
                         );
 
                         // デバッグ用にAPIレスポンスをログ出力
-                        console.log('Raw API response:', JSON.stringify(noteData, null, 2));
+                        console.log("Raw API response:", JSON.stringify(noteData, null, 2));
 
                         result = {
-                          content: [{
-                            type: "text",
-                            text: JSON.stringify(formattedNote, null, 2)
-                          }]
+                          content: [
+                            {
+                              type: "text",
+                              text: JSON.stringify(formattedNote, null, 2),
+                            },
+                          ],
                         };
                       } else {
-                        throw new Error(`無効なnoteId形式です: ${noteId}。note.comの記事IDは 'n' + 英数字の形式である必要があります。`);
+                        throw new Error(
+                          `無効なnoteId形式です: ${noteId}。note.comの記事IDは 'n' + 英数字の形式である必要があります。`
+                        );
                       }
                     } else {
                       // 通常のnoteIdパターンチェック
                       const noteIdPattern = /^n[a-zA-Z0-9]+$/;
                       if (!noteIdPattern.test(noteId)) {
-                        throw new Error(`無効なnoteId形式です: ${noteId}。note.comの記事IDは 'n' + 英数字の形式である必要があります。`);
+                        throw new Error(
+                          `無効なnoteId形式です: ${noteId}。note.comの記事IDは 'n' + 英数字の形式である必要があります。`
+                        );
                       }
 
                       const params = new URLSearchParams({
                         draft: "true",
                         draft_reedit: "false",
-                        ts: Date.now().toString()
+                        ts: Date.now().toString(),
                       });
 
                       const data = await noteApiRequest(
@@ -1034,21 +1133,26 @@ async function startServer(): Promise<void> {
                       const noteData = data.data || {};
 
                       // デバッグ用にAPIレスポンスをログ出力
-                      console.log('Raw API response from inline handler:', JSON.stringify(noteData, null, 2));
+                      console.log(
+                        "Raw API response from inline handler:",
+                        JSON.stringify(noteData, null, 2)
+                      );
 
                       // formatNote関数を使って完全なレスポンスを生成（eyecatchUrl, contentAnalysis含む）
                       const formattedNote = formatNote(
                         noteData,
-                        noteData.user?.urlname || '',
+                        noteData.user?.urlname || "",
                         true, // includeUserDetails
-                        true  // analyzeContent
+                        true // analyzeContent
                       );
 
                       result = {
-                        content: [{
-                          type: "text",
-                          text: JSON.stringify(formattedNote, null, 2)
-                        }]
+                        content: [
+                          {
+                            type: "text",
+                            text: JSON.stringify(formattedNote, null, 2),
+                          },
+                        ],
                       };
                     }
                   } else if (name === "get-my-notes") {
@@ -1060,7 +1164,7 @@ async function startServer(): Promise<void> {
                       per_page: perPage.toString(),
                       draft: "true",
                       draft_reedit: "false",
-                      ts: Date.now().toString()
+                      ts: Date.now().toString(),
                     });
 
                     if (status === "draft") {
@@ -1090,15 +1194,26 @@ async function startServer(): Promise<void> {
 
                         let excerpt = "";
                         if (note.body) {
-                          excerpt = note.body.length > 100 ? note.body.substring(0, 100) + '...' : note.body;
+                          excerpt =
+                            note.body.length > 100
+                              ? note.body.substring(0, 100) + "..."
+                              : note.body;
                         } else if (note.peekBody) {
                           excerpt = note.peekBody;
                         } else if (note.noteDraft?.body) {
-                          const textContent = note.noteDraft.body.replace(/<[^>]*>/g, '');
-                          excerpt = textContent.length > 100 ? textContent.substring(0, 100) + '...' : textContent;
+                          const textContent = note.noteDraft.body.replace(/<[^>]*>/g, "");
+                          excerpt =
+                            textContent.length > 100
+                              ? textContent.substring(0, 100) + "..."
+                              : textContent;
                         }
 
-                        const publishedAt = note.publishAt || note.publish_at || note.displayDate || note.createdAt || '日付不明';
+                        const publishedAt =
+                          note.publishAt ||
+                          note.publish_at ||
+                          note.displayDate ||
+                          note.createdAt ||
+                          "日付不明";
 
                         return {
                           id: noteId,
@@ -1118,8 +1233,8 @@ async function startServer(): Promise<void> {
                           user: {
                             id: note.user?.id || 3647265,
                             name: note.user?.name || note.user?.nickname || "",
-                            urlname: note.user?.urlname || "***USERNAME_REMOVED***"
-                          }
+                            urlname: note.user?.urlname || "***USERNAME_REMOVED***",
+                          },
                         };
                       });
                     }
@@ -1136,16 +1251,17 @@ async function startServer(): Promise<void> {
                       hasPreviousPage: page > 1,
                       draftCount: formattedNotes.filter((note: any) => note.isDraft).length,
                       publicCount: formattedNotes.filter((note: any) => !note.isDraft).length,
-                      notes: formattedNotes
+                      notes: formattedNotes,
                     };
 
                     result = {
-                      content: [{
-                        type: "text",
-                        text: JSON.stringify(resultData, null, 2)
-                      }]
+                      content: [
+                        {
+                          type: "text",
+                          text: JSON.stringify(resultData, null, 2),
+                        },
+                      ],
                     };
-
                   } else if (name === "get-comments") {
                     // get-commentsツールの実装
                     const { noteId, size = 10 } = args;
@@ -1158,12 +1274,13 @@ async function startServer(): Promise<void> {
                     );
 
                     result = {
-                      content: [{
-                        type: "text",
-                        text: JSON.stringify(data, null, 2)
-                      }]
+                      content: [
+                        {
+                          type: "text",
+                          text: JSON.stringify(data, null, 2),
+                        },
+                      ],
                     };
-
                   } else if (name === "post-comment") {
                     // post-commentツールの実装
                     const { noteId, comment } = args;
@@ -1176,12 +1293,13 @@ async function startServer(): Promise<void> {
                     );
 
                     result = {
-                      content: [{
-                        type: "text",
-                        text: JSON.stringify(data, null, 2)
-                      }]
+                      content: [
+                        {
+                          type: "text",
+                          text: JSON.stringify(data, null, 2),
+                        },
+                      ],
                     };
-
                   } else if (name === "like-note") {
                     // like-noteツールの実装
                     const { noteId } = args;
@@ -1194,12 +1312,13 @@ async function startServer(): Promise<void> {
                     );
 
                     result = {
-                      content: [{
-                        type: "text",
-                        text: JSON.stringify(data, null, 2)
-                      }]
+                      content: [
+                        {
+                          type: "text",
+                          text: JSON.stringify(data, null, 2),
+                        },
+                      ],
                     };
-
                   } else if (name === "unlike-note") {
                     // unlike-noteツールの実装
                     const { noteId } = args;
@@ -1212,12 +1331,13 @@ async function startServer(): Promise<void> {
                     );
 
                     result = {
-                      content: [{
-                        type: "text",
-                        text: JSON.stringify(data, null, 2)
-                      }]
+                      content: [
+                        {
+                          type: "text",
+                          text: JSON.stringify(data, null, 2),
+                        },
+                      ],
                     };
-
                   } else if (name === "search-users") {
                     // search-usersツールの実装
                     const { query, size = 10 } = args;
@@ -1230,12 +1350,13 @@ async function startServer(): Promise<void> {
                     );
 
                     result = {
-                      content: [{
-                        type: "text",
-                        text: JSON.stringify(data, null, 2)
-                      }]
+                      content: [
+                        {
+                          type: "text",
+                          text: JSON.stringify(data, null, 2),
+                        },
+                      ],
                     };
-
                   } else if (name === "get-user") {
                     // get-userツールの実装
                     const { username } = args;
@@ -1248,12 +1369,13 @@ async function startServer(): Promise<void> {
                     );
 
                     result = {
-                      content: [{
-                        type: "text",
-                        text: JSON.stringify(data, null, 2)
-                      }]
+                      content: [
+                        {
+                          type: "text",
+                          text: JSON.stringify(data, null, 2),
+                        },
+                      ],
                     };
-
                   } else if (name === "get-user-notes") {
                     // get-user-notesツールの実装
                     const { username, page = 1 } = args;
@@ -1266,24 +1388,34 @@ async function startServer(): Promise<void> {
                     );
 
                     result = {
-                      content: [{
-                        type: "text",
-                        text: JSON.stringify(data, null, 2)
-                      }]
+                      content: [
+                        {
+                          type: "text",
+                          text: JSON.stringify(data, null, 2),
+                        },
+                      ],
                     };
-
                   } else if (name === "post-draft-note") {
                     // post-draft-noteツールの実装（11月8日成功版：2段階プロセス + アイキャッチ対応）
                     console.error("🔧 post-draft-note ツール開始");
                     let { title, body, tags = [], id, eyecatch } = args;
 
-                    console.error("📝 受信パラメータ:", { title: title?.substring(0, 50), bodyLength: body?.length, tags, id, hasEyecatch: !!eyecatch });
+                    console.error("📝 受信パラメータ:", {
+                      title: title?.substring(0, 50),
+                      bodyLength: body?.length,
+                      tags,
+                      id,
+                      hasEyecatch: !!eyecatch,
+                    });
 
                     try {
                       // MarkdownをHTMLに変換
                       console.error("🔄 MarkdownをHTMLに変換中...");
                       const htmlBody = convertMarkdownToNoteHtml(body || "");
-                      console.error("✅ HTML変換完了:", { originalLength: body?.length, htmlLength: htmlBody.length });
+                      console.error("✅ HTML変換完了:", {
+                        originalLength: body?.length,
+                        htmlLength: htmlBody.length,
+                      });
 
                       // 新規作成の場合、まず空の下書きを作成
                       if (!id) {
@@ -1294,7 +1426,7 @@ async function startServer(): Promise<void> {
                           body_length: 0,
                           name: title || "無題",
                           index: false,
-                          is_lead_form: false
+                          is_lead_form: false,
                         };
 
                         console.error("📤 下書き作成リクエストデータ:", createData);
@@ -1334,7 +1466,7 @@ async function startServer(): Promise<void> {
                         body_length: htmlBody.length,
                         name: title || "無題",
                         index: false,
-                        is_lead_form: false
+                        is_lead_form: false,
                       };
 
                       console.error("📤 更新リクエストデータ:", updateData);
@@ -1360,52 +1492,58 @@ async function startServer(): Promise<void> {
                       if (eyecatch && eyecatch.base64 && eyecatch.fileName) {
                         console.error("🖼️ アイキャッチ画像をアップロード中...");
                         try {
-                          const imageBuffer = Buffer.from(eyecatch.base64, 'base64');
+                          const imageBuffer = Buffer.from(eyecatch.base64, "base64");
                           const fileName = eyecatch.fileName;
                           const ext = path.extname(fileName).toLowerCase();
                           const mimeTypes: { [key: string]: string } = {
-                            '.jpg': 'image/jpeg',
-                            '.jpeg': 'image/jpeg',
-                            '.png': 'image/png',
-                            '.gif': 'image/gif',
-                            '.webp': 'image/webp',
+                            ".jpg": "image/jpeg",
+                            ".jpeg": "image/jpeg",
+                            ".png": "image/png",
+                            ".gif": "image/gif",
+                            ".webp": "image/webp",
                           };
-                          const mimeType = eyecatch.mimeType || mimeTypes[ext] || 'image/png';
+                          const mimeType = eyecatch.mimeType || mimeTypes[ext] || "image/png";
 
                           // multipart/form-data を構築
                           const boundary = `----WebKitFormBoundary${Math.random().toString(36).substring(2)}`;
                           const formParts: Buffer[] = [];
 
                           // note_id フィールド
-                          formParts.push(Buffer.from(
-                            `--${boundary}\r\n` +
-                            `Content-Disposition: form-data; name="note_id"\r\n\r\n` +
-                            `${id}\r\n`
-                          ));
+                          formParts.push(
+                            Buffer.from(
+                              `--${boundary}\r\n` +
+                                `Content-Disposition: form-data; name="note_id"\r\n\r\n` +
+                                `${id}\r\n`
+                            )
+                          );
 
                           // file フィールド
-                          formParts.push(Buffer.from(
-                            `--${boundary}\r\n` +
-                            `Content-Disposition: form-data; name="file"; filename="${fileName}"\r\n` +
-                            `Content-Type: ${mimeType}\r\n\r\n`
-                          ));
+                          formParts.push(
+                            Buffer.from(
+                              `--${boundary}\r\n` +
+                                `Content-Disposition: form-data; name="file"; filename="${fileName}"\r\n` +
+                                `Content-Type: ${mimeType}\r\n\r\n`
+                            )
+                          );
                           formParts.push(imageBuffer);
-                          formParts.push(Buffer.from('\r\n'));
+                          formParts.push(Buffer.from("\r\n"));
                           formParts.push(Buffer.from(`--${boundary}--\r\n`));
 
                           const formData = Buffer.concat(formParts);
 
-                          console.error(`📤 アイキャッチアップロード: ${fileName} (${formData.length} bytes)`);
+                          console.error(
+                            `📤 アイキャッチアップロード: ${fileName} (${formData.length} bytes)`
+                          );
 
                           const uploadResponse = await noteApiRequest(
-                            '/v1/image_upload/note_eyecatch',
-                            'POST',
+                            "/v1/image_upload/note_eyecatch",
+                            "POST",
                             formData,
                             true,
                             {
-                              'Content-Type': `multipart/form-data; boundary=${boundary}`,
-                              'X-Requested-With': 'XMLHttpRequest',
-                              'Referer': editUrl
+                              "Content-Type": `multipart/form-data; boundary=${boundary}`,
+                              "X-Requested-With": "XMLHttpRequest",
+                              Referer: editUrl,
                             }
                           );
 
@@ -1427,29 +1565,36 @@ async function startServer(): Promise<void> {
                         noteKey: noteKey,
                         editUrl: editUrl,
                         eyecatchUrl: eyecatchUrl,
-                        data: data
+                        data: data,
                       };
 
                       console.error("🎉 post-draft-note 完了:", resultData);
 
                       result = {
-                        content: [{
-                          type: "text",
-                          text: JSON.stringify(resultData, null, 2)
-                        }]
+                        content: [
+                          {
+                            type: "text",
+                            text: JSON.stringify(resultData, null, 2),
+                          },
+                        ],
                       };
-
                     } catch (innerError) {
                       console.error("💥 post-draft-note 内部エラー:", innerError);
                       throw innerError;
                     }
-
                   } else if (name === "post-draft-note-with-images") {
                     // 画像付き下書き作成ツールの実装（API経由で画像を本文に挿入）
                     console.error("🔧 post-draft-note-with-images ツール開始");
                     let { title, body, images = [], tags = [], id, eyecatch } = args;
 
-                    console.error("📝 受信パラメータ:", { title: title?.substring(0, 50), bodyLength: body?.length, imageCount: images.length, tags, id, hasEyecatch: !!eyecatch });
+                    console.error("📝 受信パラメータ:", {
+                      title: title?.substring(0, 50),
+                      bodyLength: body?.length,
+                      imageCount: images.length,
+                      tags,
+                      id,
+                      hasEyecatch: !!eyecatch,
+                    });
 
                     try {
                       // 画像をアップロードしてURLを取得
@@ -1460,31 +1605,33 @@ async function startServer(): Promise<void> {
 
                         for (const img of images) {
                           try {
-                            const imageBuffer = Buffer.from(img.base64, 'base64');
+                            const imageBuffer = Buffer.from(img.base64, "base64");
                             const fileName = img.fileName;
-                            const mimeType = img.mimeType || 'image/png';
+                            const mimeType = img.mimeType || "image/png";
 
                             // Step 1: Presigned URLを取得
                             const boundary1 = `----WebKitFormBoundary${Math.random().toString(36).substring(2)}`;
                             const presignFormParts: Buffer[] = [];
-                            presignFormParts.push(Buffer.from(
-                              `--${boundary1}\r\n` +
-                              `Content-Disposition: form-data; name="filename"\r\n\r\n` +
-                              `${fileName}\r\n`
-                            ));
+                            presignFormParts.push(
+                              Buffer.from(
+                                `--${boundary1}\r\n` +
+                                  `Content-Disposition: form-data; name="filename"\r\n\r\n` +
+                                  `${fileName}\r\n`
+                              )
+                            );
                             presignFormParts.push(Buffer.from(`--${boundary1}--\r\n`));
                             const presignFormData = Buffer.concat(presignFormParts);
 
                             const presignResponse = await noteApiRequest(
-                              '/v3/images/upload/presigned_post',
-                              'POST',
+                              "/v3/images/upload/presigned_post",
+                              "POST",
                               presignFormData,
                               true,
                               {
-                                'Content-Type': `multipart/form-data; boundary=${boundary1}`,
-                                'Content-Length': presignFormData.length.toString(),
-                                'X-Requested-With': 'XMLHttpRequest',
-                                'Referer': 'https://editor.note.com/'
+                                "Content-Type": `multipart/form-data; boundary=${boundary1}`,
+                                "Content-Length": presignFormData.length.toString(),
+                                "X-Requested-With": "XMLHttpRequest",
+                                Referer: "https://editor.note.com/",
                               }
                             );
 
@@ -1493,51 +1640,71 @@ async function startServer(): Promise<void> {
                               continue;
                             }
 
-                            const { url: finalImageUrl, action: s3Url, post: s3Params } = presignResponse.data;
+                            const {
+                              url: finalImageUrl,
+                              action: s3Url,
+                              post: s3Params,
+                            } = presignResponse.data;
 
                             // Step 2: S3にアップロード
                             const boundary2 = `----WebKitFormBoundary${Math.random().toString(36).substring(2)}`;
                             const s3FormParts: Buffer[] = [];
 
-                            const paramOrder = ['key', 'acl', 'Expires', 'policy', 'x-amz-credential', 'x-amz-algorithm', 'x-amz-date', 'x-amz-signature'];
+                            const paramOrder = [
+                              "key",
+                              "acl",
+                              "Expires",
+                              "policy",
+                              "x-amz-credential",
+                              "x-amz-algorithm",
+                              "x-amz-date",
+                              "x-amz-signature",
+                            ];
                             for (const key of paramOrder) {
                               if (s3Params[key]) {
-                                s3FormParts.push(Buffer.from(
-                                  `--${boundary2}\r\n` +
-                                  `Content-Disposition: form-data; name="${key}"\r\n\r\n` +
-                                  `${s3Params[key]}\r\n`
-                                ));
+                                s3FormParts.push(
+                                  Buffer.from(
+                                    `--${boundary2}\r\n` +
+                                      `Content-Disposition: form-data; name="${key}"\r\n\r\n` +
+                                      `${s3Params[key]}\r\n`
+                                  )
+                                );
                               }
                             }
 
-                            s3FormParts.push(Buffer.from(
-                              `--${boundary2}\r\n` +
-                              `Content-Disposition: form-data; name="file"; filename="${fileName}"\r\n` +
-                              `Content-Type: ${mimeType}\r\n\r\n`
-                            ));
+                            s3FormParts.push(
+                              Buffer.from(
+                                `--${boundary2}\r\n` +
+                                  `Content-Disposition: form-data; name="file"; filename="${fileName}"\r\n` +
+                                  `Content-Type: ${mimeType}\r\n\r\n`
+                              )
+                            );
                             s3FormParts.push(imageBuffer);
-                            s3FormParts.push(Buffer.from('\r\n'));
+                            s3FormParts.push(Buffer.from("\r\n"));
                             s3FormParts.push(Buffer.from(`--${boundary2}--\r\n`));
 
                             const s3FormData = Buffer.concat(s3FormParts);
 
                             const s3Response = await fetch(s3Url, {
-                              method: 'POST',
+                              method: "POST",
                               headers: {
-                                'Content-Type': `multipart/form-data; boundary=${boundary2}`,
-                                'Content-Length': s3FormData.length.toString()
+                                "Content-Type": `multipart/form-data; boundary=${boundary2}`,
+                                "Content-Length": s3FormData.length.toString(),
                               },
-                              body: s3FormData
+                              body: s3FormData,
                             });
 
                             if (!s3Response.ok && s3Response.status !== 204) {
-                              console.error(`❌ S3アップロード失敗: ${fileName} (${s3Response.status})`);
+                              console.error(
+                                `❌ S3アップロード失敗: ${fileName} (${s3Response.status})`
+                              );
                               continue;
                             }
 
                             uploadedImages.set(fileName, finalImageUrl);
-                            console.error(`✅ 画像アップロード成功: ${fileName} -> ${finalImageUrl}`);
-
+                            console.error(
+                              `✅ 画像アップロード成功: ${fileName} -> ${finalImageUrl}`
+                            );
                           } catch (e: any) {
                             console.error(`❌ 画像アップロードエラー: ${img.fileName}`, e.message);
                           }
@@ -1555,7 +1722,9 @@ async function startServer(): Promise<void> {
                       processedBody = processedBody.replace(
                         /<!--\s*ai-summary:start[^>]*-->\n(!\[\[([^\]|]+)(?:\|[^\]]+)?\]\])\n\*([^*]+)\*\n<!--\s*ai-summary:end[^>]*-->/g,
                         (match: string, imgTag: string, fileName: string, caption: string) => {
-                          console.error(`🏷️ ai-summary match found: fileName=${fileName}, caption=${caption.substring(0, 50)}...`);
+                          console.error(
+                            `🏷️ ai-summary match found: fileName=${fileName}, caption=${caption.substring(0, 50)}...`
+                          );
                           const cleanFileName = fileName.trim();
                           const baseName = path.basename(cleanFileName);
                           if (uploadedImages.has(baseName)) {
@@ -1578,7 +1747,7 @@ async function startServer(): Promise<void> {
                             const imageUrl = uploadedImages.get(baseName)!;
                             const uuid1 = crypto.randomUUID();
                             const uuid2 = crypto.randomUUID();
-                            return `<figure name="${uuid1}" id="${uuid2}"><img src="${imageUrl}" alt="" width="620" height="auto"><figcaption>${caption || ''}</figcaption></figure>`;
+                            return `<figure name="${uuid1}" id="${uuid2}"><img src="${imageUrl}" alt="" width="620" height="auto"><figcaption>${caption || ""}</figcaption></figure>`;
                           }
                           return match;
                         }
@@ -1588,13 +1757,13 @@ async function startServer(): Promise<void> {
                       processedBody = processedBody.replace(
                         /!\[([^\]]*)\]\(([^)]+)\)/g,
                         (match: string, alt: string, srcPath: string) => {
-                          if (srcPath.startsWith('http')) return match;
+                          if (srcPath.startsWith("http")) return match;
                           const baseName = path.basename(srcPath);
                           if (uploadedImages.has(baseName)) {
                             const imageUrl = uploadedImages.get(baseName)!;
                             const uuid1 = crypto.randomUUID();
                             const uuid2 = crypto.randomUUID();
-                            return `<figure name="${uuid1}" id="${uuid2}"><img src="${imageUrl}" alt="" width="620" height="auto"><figcaption>${alt || ''}</figcaption></figure>`;
+                            return `<figure name="${uuid1}" id="${uuid2}"><img src="${imageUrl}" alt="" width="620" height="auto"><figcaption>${alt || ""}</figcaption></figure>`;
                           }
                           return match;
                         }
@@ -1609,7 +1778,7 @@ async function startServer(): Promise<void> {
                           body_length: 0,
                           name: title || "無題",
                           index: false,
-                          is_lead_form: false
+                          is_lead_form: false,
                         };
 
                         const headers = buildCustomHeaders();
@@ -1637,10 +1806,13 @@ async function startServer(): Promise<void> {
                       // figureタグを先に退避（convertMarkdownToNoteHtmlは<figure>タグを認識しないため）
                       const figurePattern = /<figure[^>]*>[\s\S]*?<\/figure>/g;
                       const figures: string[] = [];
-                      let bodyForConversion = processedBody.replace(figurePattern, (match: string) => {
-                        figures.push(match);
-                        return `__FIGURE_PLACEHOLDER_${figures.length - 1}__`;
-                      });
+                      let bodyForConversion = processedBody.replace(
+                        figurePattern,
+                        (match: string) => {
+                          figures.push(match);
+                          return `__FIGURE_PLACEHOLDER_${figures.length - 1}__`;
+                        }
+                      );
 
                       // Markdown→HTML変換
                       let htmlBody = convertMarkdownToNoteHtml(bodyForConversion);
@@ -1649,7 +1821,10 @@ async function startServer(): Promise<void> {
                       figures.forEach((figure, index) => {
                         htmlBody = htmlBody.replace(`__FIGURE_PLACEHOLDER_${index}__`, figure);
                         // プレースホルダーが<p>タグで囲まれている場合は除去
-                        htmlBody = htmlBody.replace(`<p>__FIGURE_PLACEHOLDER_${index}__</p>`, figure);
+                        htmlBody = htmlBody.replace(
+                          `<p>__FIGURE_PLACEHOLDER_${index}__</p>`,
+                          figure
+                        );
                       });
 
                       console.error(`✅ HTML変換完了 (${htmlBody.length} chars)`);
@@ -1662,7 +1837,7 @@ async function startServer(): Promise<void> {
                         body_length: (htmlBody || "").length,
                         name: title || "無題",
                         index: false,
-                        is_lead_form: false
+                        is_lead_form: false,
                       };
 
                       const headers = buildCustomHeaders();
@@ -1683,52 +1858,58 @@ async function startServer(): Promise<void> {
                       if (eyecatch && eyecatch.base64 && eyecatch.fileName) {
                         console.error("🖼️ アイキャッチ画像をアップロード中...");
                         try {
-                          const imageBuffer = Buffer.from(eyecatch.base64, 'base64');
+                          const imageBuffer = Buffer.from(eyecatch.base64, "base64");
                           const fileName = eyecatch.fileName;
                           const ext = path.extname(fileName).toLowerCase();
                           const mimeTypes: { [key: string]: string } = {
-                            '.jpg': 'image/jpeg',
-                            '.jpeg': 'image/jpeg',
-                            '.png': 'image/png',
-                            '.gif': 'image/gif',
-                            '.webp': 'image/webp',
+                            ".jpg": "image/jpeg",
+                            ".jpeg": "image/jpeg",
+                            ".png": "image/png",
+                            ".gif": "image/gif",
+                            ".webp": "image/webp",
                           };
-                          const mimeType = eyecatch.mimeType || mimeTypes[ext] || 'image/png';
+                          const mimeType = eyecatch.mimeType || mimeTypes[ext] || "image/png";
 
                           // multipart/form-data を構築
                           const boundary = `----WebKitFormBoundary${Math.random().toString(36).substring(2)}`;
                           const formParts: Buffer[] = [];
 
                           // note_id フィールド
-                          formParts.push(Buffer.from(
-                            `--${boundary}\r\n` +
-                            `Content-Disposition: form-data; name="note_id"\r\n\r\n` +
-                            `${id}\r\n`
-                          ));
+                          formParts.push(
+                            Buffer.from(
+                              `--${boundary}\r\n` +
+                                `Content-Disposition: form-data; name="note_id"\r\n\r\n` +
+                                `${id}\r\n`
+                            )
+                          );
 
                           // file フィールド
-                          formParts.push(Buffer.from(
-                            `--${boundary}\r\n` +
-                            `Content-Disposition: form-data; name="file"; filename="${fileName}"\r\n` +
-                            `Content-Type: ${mimeType}\r\n\r\n`
-                          ));
+                          formParts.push(
+                            Buffer.from(
+                              `--${boundary}\r\n` +
+                                `Content-Disposition: form-data; name="file"; filename="${fileName}"\r\n` +
+                                `Content-Type: ${mimeType}\r\n\r\n`
+                            )
+                          );
                           formParts.push(imageBuffer);
-                          formParts.push(Buffer.from('\r\n'));
+                          formParts.push(Buffer.from("\r\n"));
                           formParts.push(Buffer.from(`--${boundary}--\r\n`));
 
                           const formData = Buffer.concat(formParts);
 
-                          console.error(`📤 アイキャッチアップロード: ${fileName} (${formData.length} bytes)`);
+                          console.error(
+                            `📤 アイキャッチアップロード: ${fileName} (${formData.length} bytes)`
+                          );
 
                           const uploadResponse = await noteApiRequest(
-                            '/v1/image_upload/note_eyecatch',
-                            'POST',
+                            "/v1/image_upload/note_eyecatch",
+                            "POST",
                             formData,
                             true,
                             {
-                              'Content-Type': `multipart/form-data; boundary=${boundary}`,
-                              'X-Requested-With': 'XMLHttpRequest',
-                              'Referer': editUrl
+                              "Content-Type": `multipart/form-data; boundary=${boundary}`,
+                              "X-Requested-With": "XMLHttpRequest",
+                              Referer: editUrl,
                             }
                           );
 
@@ -1750,34 +1931,37 @@ async function startServer(): Promise<void> {
                         noteKey: noteKey,
                         editUrl: editUrl,
                         eyecatchUrl: eyecatchUrl,
-                        uploadedImages: Array.from(uploadedImages.entries()).map(([name, url]) => ({ name, url })),
+                        uploadedImages: Array.from(uploadedImages.entries()).map(([name, url]) => ({
+                          name,
+                          url,
+                        })),
                         imageCount: uploadedImages.size,
-                        data: data
+                        data: data,
                       };
 
                       console.error("🎉 post-draft-note-with-images 完了:", resultData);
 
                       result = {
-                        content: [{
-                          type: "text",
-                          text: JSON.stringify(resultData, null, 2)
-                        }]
+                        content: [
+                          {
+                            type: "text",
+                            text: JSON.stringify(resultData, null, 2),
+                          },
+                        ],
                       };
-
                     } catch (innerError) {
                       console.error("💥 post-draft-note-with-images 内部エラー:", innerError);
                       throw innerError;
                     }
-
                   } else if (name === "edit-note") {
                     // edit-noteツールの実装（参考: https://note.com/taku_sid/n/n1b1b7894e28f）
                     const { id, title, body, tags = [], isDraft = true } = args;
 
                     // 参照記事に基づく正しいパラメータ形式
                     const postData = {
-                      name: title,  // 'title'ではなく'name'
+                      name: title, // 'title'ではなく'name'
                       body: body,
-                      status: isDraft ? "draft" : "published"
+                      status: isDraft ? "draft" : "published",
                     };
 
                     const data = await noteApiRequest(
@@ -1788,16 +1972,21 @@ async function startServer(): Promise<void> {
                     );
 
                     result = {
-                      content: [{
-                        type: "text",
-                        text: JSON.stringify({
-                          success: true,
-                          message: "記事を更新しました",
-                          data: data
-                        }, null, 2)
-                      }]
+                      content: [
+                        {
+                          type: "text",
+                          text: JSON.stringify(
+                            {
+                              success: true,
+                              message: "記事を更新しました",
+                              data: data,
+                            },
+                            null,
+                            2
+                          ),
+                        },
+                      ],
                     };
-
                   } else if (name === "search-magazines") {
                     // search-magazinesツールの実装
                     const { query, size = 10 } = args;
@@ -1810,12 +1999,13 @@ async function startServer(): Promise<void> {
                     );
 
                     result = {
-                      content: [{
-                        type: "text",
-                        text: JSON.stringify(data, null, 2)
-                      }]
+                      content: [
+                        {
+                          type: "text",
+                          text: JSON.stringify(data, null, 2),
+                        },
+                      ],
                     };
-
                   } else if (name === "get-magazine") {
                     // get-magazineツールの実装
                     const { magazineId } = args;
@@ -1828,44 +2018,37 @@ async function startServer(): Promise<void> {
                     );
 
                     result = {
-                      content: [{
-                        type: "text",
-                        text: JSON.stringify(data, null, 2)
-                      }]
+                      content: [
+                        {
+                          type: "text",
+                          text: JSON.stringify(data, null, 2),
+                        },
+                      ],
                     };
-
                   } else if (name === "list-categories") {
                     // list-categoriesツールの実装
-                    const data = await noteApiRequest(
-                      `/v2/categories`,
-                      "GET",
-                      null,
-                      true
-                    );
+                    const data = await noteApiRequest(`/v2/categories`, "GET", null, true);
 
                     result = {
-                      content: [{
-                        type: "text",
-                        text: JSON.stringify(data, null, 2)
-                      }]
+                      content: [
+                        {
+                          type: "text",
+                          text: JSON.stringify(data, null, 2),
+                        },
+                      ],
                     };
-
                   } else if (name === "list-hashtags") {
                     // list-hashtagsツールの実装
-                    const data = await noteApiRequest(
-                      `/v2/hashtags`,
-                      "GET",
-                      null,
-                      true
-                    );
+                    const data = await noteApiRequest(`/v2/hashtags`, "GET", null, true);
 
                     result = {
-                      content: [{
-                        type: "text",
-                        text: JSON.stringify(data, null, 2)
-                      }]
+                      content: [
+                        {
+                          type: "text",
+                          text: JSON.stringify(data, null, 2),
+                        },
+                      ],
                     };
-
                   } else if (name === "get-stats") {
                     // get-statsツールの実装
                     const { noteId } = args;
@@ -1878,12 +2061,13 @@ async function startServer(): Promise<void> {
                     );
 
                     result = {
-                      content: [{
-                        type: "text",
-                        text: JSON.stringify(data, null, 2)
-                      }]
+                      content: [
+                        {
+                          type: "text",
+                          text: JSON.stringify(data, null, 2),
+                        },
+                      ],
                     };
-
                   } else if (name === "get-membership-summaries") {
                     // get-membership-summariesツールの実装
                     const data = await noteApiRequest(
@@ -1894,12 +2078,13 @@ async function startServer(): Promise<void> {
                     );
 
                     result = {
-                      content: [{
-                        type: "text",
-                        text: JSON.stringify(data, null, 2)
-                      }]
+                      content: [
+                        {
+                          type: "text",
+                          text: JSON.stringify(data, null, 2),
+                        },
+                      ],
                     };
-
                   } else if (name === "get-membership-plans") {
                     // get-membership-plansツールの実装
                     const data = await noteApiRequest(
@@ -1910,12 +2095,13 @@ async function startServer(): Promise<void> {
                     );
 
                     result = {
-                      content: [{
-                        type: "text",
-                        text: JSON.stringify(data, null, 2)
-                      }]
+                      content: [
+                        {
+                          type: "text",
+                          text: JSON.stringify(data, null, 2),
+                        },
+                      ],
                     };
-
                   } else if (name === "get-membership-notes") {
                     // get-membership-notesツールの実装
                     const { size = 10 } = args;
@@ -1928,46 +2114,39 @@ async function startServer(): Promise<void> {
                     );
 
                     result = {
-                      content: [{
-                        type: "text",
-                        text: JSON.stringify(data, null, 2)
-                      }]
+                      content: [
+                        {
+                          type: "text",
+                          text: JSON.stringify(data, null, 2),
+                        },
+                      ],
                     };
-
                   } else if (name === "get-circle-info") {
                     // get-circle-infoツールの実装
                     const { circleId } = args;
 
-                    const data = await noteApiRequest(
-                      `/v1/circles/${circleId}`,
-                      "GET",
-                      null,
-                      true
-                    );
+                    const data = await noteApiRequest(`/v1/circles/${circleId}`, "GET", null, true);
 
                     result = {
-                      content: [{
-                        type: "text",
-                        text: JSON.stringify(data, null, 2)
-                      }]
+                      content: [
+                        {
+                          type: "text",
+                          text: JSON.stringify(data, null, 2),
+                        },
+                      ],
                     };
-
                   } else if (name === "get-notice-counts") {
                     // get-notice-countsツールの実装
-                    const data = await noteApiRequest(
-                      `/v3/notice_counts`,
-                      "GET",
-                      null,
-                      true
-                    );
+                    const data = await noteApiRequest(`/v3/notice_counts`, "GET", null, true);
 
                     result = {
-                      content: [{
-                        type: "text",
-                        text: JSON.stringify(data, null, 2)
-                      }]
+                      content: [
+                        {
+                          type: "text",
+                          text: JSON.stringify(data, null, 2),
+                        },
+                      ],
                     };
-
                   } else if (name === "search-all") {
                     // search-allツールの実装
                     const { query, size = 10, sort = "new" } = args;
@@ -1980,49 +2159,72 @@ async function startServer(): Promise<void> {
                     );
 
                     result = {
-                      content: [{
-                        type: "text",
-                        text: JSON.stringify(data, null, 2)
-                      }]
+                      content: [
+                        {
+                          type: "text",
+                          text: JSON.stringify(data, null, 2),
+                        },
+                      ],
                     };
-
                   } else if (name === "publish-from-obsidian-remote") {
                     // publish-from-obsidian-remoteツールの実装（リモートサーバー用）
-                    const { title, markdown, eyecatch, images, tags, headless = true, saveAsDraft = true } = args;
+                    const {
+                      title,
+                      markdown,
+                      eyecatch,
+                      images,
+                      tags,
+                      headless = true,
+                      saveAsDraft = true,
+                    } = args;
 
                     if (!hasAuth()) {
                       result = {
-                        content: [{
-                          type: "text",
-                          text: JSON.stringify({
-                            error: "認証が必要です",
-                            message: "NOTE_EMAILとNOTE_PASSWORDを.envファイルに設定してください"
-                          }, null, 2)
-                        }]
+                        content: [
+                          {
+                            type: "text",
+                            text: JSON.stringify(
+                              {
+                                error: "認証が必要です",
+                                message:
+                                  "NOTE_EMAILとNOTE_PASSWORDを.envファイルに設定してください",
+                              },
+                              null,
+                              2
+                            ),
+                          },
+                        ],
                       };
                     } else {
                       let tempDir: string | null = null;
                       try {
                         // 一時ディレクトリを作成
-                        tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'note-images-'));
+                        tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "note-images-"));
 
                         // アイキャッチ画像をデコードして一時ファイルに保存
                         let eyecatchTempPath: string | null = null;
                         if (eyecatch && eyecatch.base64 && eyecatch.fileName) {
                           try {
-                            const buffer = Buffer.from(eyecatch.base64, 'base64');
+                            const buffer = Buffer.from(eyecatch.base64, "base64");
                             eyecatchTempPath = path.join(tempDir, eyecatch.fileName);
                             fs.writeFileSync(eyecatchTempPath, buffer);
-                            console.log(`[publish-from-obsidian-remote] Eyecatch image saved: ${eyecatchTempPath}`);
+                            console.log(
+                              `[publish-from-obsidian-remote] Eyecatch image saved: ${eyecatchTempPath}`
+                            );
                           } catch (e: any) {
-                            console.error(`アイキャッチ画像デコードエラー: ${eyecatch.fileName}`, e.message);
+                            console.error(
+                              `アイキャッチ画像デコードエラー: ${eyecatch.fileName}`,
+                              e.message
+                            );
                           }
                         }
 
                         // 本文中の画像は現在未使用（将来の拡張用）
                         const decodedImages: { fileName: string; tempPath: string }[] = [];
                         if (images && Array.isArray(images) && images.length > 0) {
-                          console.log(`[publish-from-obsidian-remote] ${images.length} body images received (currently not inserted)`);
+                          console.log(
+                            `[publish-from-obsidian-remote] ${images.length} body images received (currently not inserted)`
+                          );
                         }
 
                         // Markdownから画像参照を削除（テキストのみ入力）
@@ -2031,27 +2233,31 @@ async function startServer(): Promise<void> {
                         // Obsidian形式の画像参照を削除: ![[filename.png]]
                         processedMarkdown = processedMarkdown.replace(
                           /!\[\[([^\]|]+)(?:\|[^\]]+)?\]\]/g,
-                          ''
+                          ""
                         );
 
                         // 標準Markdown形式の画像参照を削除: ![alt](path)
                         processedMarkdown = processedMarkdown.replace(
                           /!\[([^\]]*)\]\(([^)]+)\)/g,
-                          ''
+                          ""
                         );
 
                         // 空行の連続を整理
-                        processedMarkdown = processedMarkdown.replace(/\n{3,}/g, '\n\n').trim();
+                        processedMarkdown = processedMarkdown.replace(/\n{3,}/g, "\n\n").trim();
 
                         // ストレージ状態ファイルがあれば使用
                         const storageStatePath = getStorageStatePath();
                         let useStorageState = hasStorageState();
-                        console.log(`[publish-from-obsidian-remote] Storage state exists: ${useStorageState}`);
+                        console.log(
+                          `[publish-from-obsidian-remote] Storage state exists: ${useStorageState}`
+                        );
 
                         // ブラウザとページを準備する関数
                         const launchBrowserWithAuth = async (retryLogin = false) => {
                           if (retryLogin) {
-                            console.log('[publish-from-obsidian-remote] Performing fresh Playwright login...');
+                            console.log(
+                              "[publish-from-obsidian-remote] Performing fresh Playwright login..."
+                            );
                             await refreshSessionWithPlaywright({ headless });
                             useStorageState = true;
                           }
@@ -2059,34 +2265,46 @@ async function startServer(): Promise<void> {
                           const browser = await chromium.launch({ headless, slowMo: 100 });
                           const contextOptions: any = {
                             viewport: { width: 1280, height: 900 },
-                            locale: 'ja-JP'
+                            locale: "ja-JP",
                           };
 
                           if (useStorageState) {
                             contextOptions.storageState = storageStatePath;
-                            console.log(`[publish-from-obsidian-remote] Using storage state: ${storageStatePath}`);
+                            console.log(
+                              `[publish-from-obsidian-remote] Using storage state: ${storageStatePath}`
+                            );
                           }
 
                           const context = await browser.newContext(contextOptions);
                           const page = await context.newPage();
                           page.setDefaultTimeout(60000);
 
-                          console.log('[publish-from-obsidian-remote] Navigating to editor...');
-                          await page.goto('https://editor.note.com/new', { waitUntil: 'domcontentloaded' });
+                          console.log("[publish-from-obsidian-remote] Navigating to editor...");
+                          await page.goto("https://editor.note.com/new", {
+                            waitUntil: "domcontentloaded",
+                          });
                           await page.waitForTimeout(3000);
 
                           const currentUrl = page.url();
                           console.log(`[publish-from-obsidian-remote] Current URL: ${currentUrl}`);
 
-                          return { browser, context, page, isLoggedIn: !currentUrl.includes('/login') };
+                          return {
+                            browser,
+                            context,
+                            page,
+                            isLoggedIn: !currentUrl.includes("/login"),
+                          };
                         };
 
                         // 初回試行
-                        let { browser, context, page, isLoggedIn } = await launchBrowserWithAuth(false);
+                        let { browser, context, page, isLoggedIn } =
+                          await launchBrowserWithAuth(false);
 
                         // ログインページにリダイレクトされた場合、再ログインしてリトライ
                         if (!isLoggedIn) {
-                          console.log('[publish-from-obsidian-remote] Redirected to login, will retry with fresh login...');
+                          console.log(
+                            "[publish-from-obsidian-remote] Redirected to login, will retry with fresh login..."
+                          );
                           await browser.close();
 
                           const retry = await launchBrowserWithAuth(true);
@@ -2096,7 +2314,9 @@ async function startServer(): Promise<void> {
 
                           if (!retry.isLoggedIn) {
                             await browser.close();
-                            throw new Error('再ログイン後もエディタにアクセスできません。認証情報を確認してください。');
+                            throw new Error(
+                              "再ログイン後もエディタにアクセスできません。認証情報を確認してください。"
+                            );
                           }
                         }
 
@@ -2106,13 +2326,19 @@ async function startServer(): Promise<void> {
                           selectors: string[],
                           timeoutMs: number
                         ): Promise<any> => {
-                          const perSelectorTimeout = Math.max(Math.floor(timeoutMs / selectors.length), 3000);
+                          const perSelectorTimeout = Math.max(
+                            Math.floor(timeoutMs / selectors.length),
+                            3000
+                          );
                           let lastError: Error | undefined;
 
                           for (const selector of selectors) {
                             const locator = pageObj.locator(selector).first();
                             try {
-                              await locator.waitFor({ state: 'visible', timeout: perSelectorTimeout });
+                              await locator.waitFor({
+                                state: "visible",
+                                timeout: perSelectorTimeout,
+                              });
                               return locator;
                             } catch (error) {
                               lastError = error as Error;
@@ -2120,22 +2346,29 @@ async function startServer(): Promise<void> {
                           }
 
                           throw new Error(
-                            `タイトル入力欄が見つかりませんでした: ${selectors.join(', ')}\n${lastError?.message || ''}`
+                            `タイトル入力欄が見つかりませんでした: ${selectors.join(", ")}\n${lastError?.message || ""}`
                           );
                         };
 
-                        const fillNoteTitle = async (pageObj: any, noteTitle: string): Promise<void> => {
+                        const fillNoteTitle = async (
+                          pageObj: any,
+                          noteTitle: string
+                        ): Promise<void> => {
                           // エディタページが完全に読み込まれるまで待機
-                          await pageObj.waitForLoadState('networkidle').catch(() => { });
+                          await pageObj.waitForLoadState("networkidle").catch(() => {});
                           await pageObj.waitForTimeout(2000);
 
                           // 現在のURLを確認
                           const currentUrl = pageObj.url();
-                          console.log(`[publish-from-obsidian-remote] fillNoteTitle - Current URL: ${currentUrl}`);
+                          console.log(
+                            `[publish-from-obsidian-remote] fillNoteTitle - Current URL: ${currentUrl}`
+                          );
 
                           // ログインページにいる場合はエラー
-                          if (currentUrl.includes('/login')) {
-                            throw new Error('ログインページにリダイレクトされました。認証情報を確認してください。');
+                          if (currentUrl.includes("/login")) {
+                            throw new Error(
+                              "ログインページにリダイレクトされました。認証情報を確認してください。"
+                            );
                           }
 
                           const titleSelectors = [
@@ -2156,27 +2389,33 @@ async function startServer(): Promise<void> {
                             '[contenteditable="true"][data-placeholder*="タイトル"]',
                             'h1[contenteditable="true"]',
                             // 汎用フォールバック（エディタ内の最初のtextarea/input）
-                            'main textarea',
+                            "main textarea",
                             'main input[type="text"]',
                             '[role="main"] textarea',
                             '[role="main"] input[type="text"]',
-                            'textarea',
+                            "textarea",
                             'input[type="text"]',
                           ];
 
-                          console.log('[publish-from-obsidian-remote] Waiting for title input...');
-                          const titleArea = await waitForFirstVisibleLocator(pageObj, titleSelectors, 30000);
-                          console.log('[publish-from-obsidian-remote] Title input found, filling...');
+                          console.log("[publish-from-obsidian-remote] Waiting for title input...");
+                          const titleArea = await waitForFirstVisibleLocator(
+                            pageObj,
+                            titleSelectors,
+                            30000
+                          );
+                          console.log(
+                            "[publish-from-obsidian-remote] Title input found, filling..."
+                          );
                           await titleArea.click();
                           try {
                             await titleArea.fill(noteTitle);
                           } catch {
-                            const modifier = process.platform === 'darwin' ? 'Meta' : 'Control';
+                            const modifier = process.platform === "darwin" ? "Meta" : "Control";
                             await pageObj.keyboard.press(`${modifier}+A`);
-                            await pageObj.keyboard.press('Backspace');
+                            await pageObj.keyboard.press("Backspace");
                             await pageObj.keyboard.type(noteTitle);
                           }
-                          console.log('[publish-from-obsidian-remote] Title filled successfully');
+                          console.log("[publish-from-obsidian-remote] Title filled successfully");
                         };
 
                         await fillNoteTitle(page, title);
@@ -2186,37 +2425,53 @@ async function startServer(): Promise<void> {
 
                         // アイキャッチ画像のパスはeyecatchTempPathを使用（フロントマターから取得）
                         // 本文から画像要素を除外（テキストのみ入力）
-                        const bodyElements = elements.filter((element: any) => element.type !== 'image');
+                        const bodyElements = elements.filter(
+                          (element: any) => element.type !== "image"
+                        );
 
                         // 画像挿入関数
-                        const insertImageFn = async (pageObj: any, bodyBox: any, imagePath: string) => {
-                          await pageObj.keyboard.press('Enter');
-                          await pageObj.keyboard.press('Enter');
+                        const insertImageFn = async (
+                          pageObj: any,
+                          bodyBox: any,
+                          imagePath: string
+                        ) => {
+                          await pageObj.keyboard.press("Enter");
+                          await pageObj.keyboard.press("Enter");
                           await pageObj.waitForTimeout(500);
 
                           const bodyBoxHandle = await bodyBox.boundingBox();
-                          const allBtns = await pageObj.$$('button');
+                          const allBtns = await pageObj.$$("button");
 
                           for (const btn of allBtns) {
                             const box = await btn.boundingBox();
                             if (!box) continue;
-                            if (bodyBoxHandle &&
+                            if (
+                              bodyBoxHandle &&
                               box.x > bodyBoxHandle.x - 100 &&
                               box.x < bodyBoxHandle.x &&
                               box.y > bodyBoxHandle.y &&
                               box.y < bodyBoxHandle.y + 200 &&
-                              box.width < 60) {
-                              await pageObj.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+                              box.width < 60
+                            ) {
+                              await pageObj.mouse.move(
+                                box.x + box.width / 2,
+                                box.y + box.height / 2
+                              );
                               await pageObj.waitForTimeout(300);
-                              await pageObj.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
+                              await pageObj.mouse.click(
+                                box.x + box.width / 2,
+                                box.y + box.height / 2
+                              );
                               await pageObj.waitForTimeout(1500);
                               break;
                             }
                           }
 
-                          const imageMenuItem = pageObj.locator('[role="menuitem"]:has-text("画像")').first();
+                          const imageMenuItem = pageObj
+                            .locator('[role="menuitem"]:has-text("画像")')
+                            .first();
                           const [chooser] = await Promise.all([
-                            pageObj.waitForEvent('filechooser', { timeout: 10000 }),
+                            pageObj.waitForEvent("filechooser", { timeout: 10000 }),
                             imageMenuItem.click(),
                           ]);
                           await chooser.setFiles(imagePath);
@@ -2224,11 +2479,13 @@ async function startServer(): Promise<void> {
 
                           const dialog = pageObj.locator('div[role="dialog"]');
                           try {
-                            await dialog.waitFor({ state: 'visible', timeout: 5000 });
+                            await dialog.waitFor({ state: "visible", timeout: 5000 });
                             const saveBtn = dialog.locator('button:has-text("保存")').first();
-                            await saveBtn.waitFor({ state: 'visible', timeout: 5000 });
+                            await saveBtn.waitFor({ state: "visible", timeout: 5000 });
                             await saveBtn.click();
-                            await dialog.waitFor({ state: 'hidden', timeout: 10000 }).catch(() => { });
+                            await dialog
+                              .waitFor({ state: "hidden", timeout: 10000 })
+                              .catch(() => {});
                             await pageObj.waitForTimeout(3000);
                           } catch (e) {
                             // トリミングダイアログなし
@@ -2241,10 +2498,12 @@ async function startServer(): Promise<void> {
                         // 下書き保存
                         if (saveAsDraft) {
                           const saveBtn = page.locator('button:has-text("下書き保存")').first();
-                          await saveBtn.waitFor({ state: 'visible' });
+                          await saveBtn.waitFor({ state: "visible" });
                           if (await saveBtn.isEnabled()) {
                             await saveBtn.click();
-                            await page.waitForURL((url) => !url.href.includes('/new'), { timeout: 30000 }).catch(() => { });
+                            await page
+                              .waitForURL((url) => !url.href.includes("/new"), { timeout: 30000 })
+                              .catch(() => {});
                             await page.waitForTimeout(3000);
                           }
                         }
@@ -2252,10 +2511,12 @@ async function startServer(): Promise<void> {
                         const noteUrl = page.url();
                         const noteKeyMatch = noteUrl.match(/\/notes\/(n[a-zA-Z0-9]+)\/edit/);
                         const noteKey = noteKeyMatch ? noteKeyMatch[1] : undefined;
-                        const editUrl = noteKey ? `https://editor.note.com/notes/${noteKey}/edit/` : noteUrl;
+                        const editUrl = noteKey
+                          ? `https://editor.note.com/notes/${noteKey}/edit/`
+                          : noteUrl;
 
                         // noteIdを抽出（nプレフィックスを除去）
-                        const noteId = noteKey ? noteKey.replace(/^n/, '') : undefined;
+                        const noteId = noteKey ? noteKey.replace(/^n/, "") : undefined;
 
                         await browser.close();
 
@@ -2264,153 +2525,199 @@ async function startServer(): Promise<void> {
                         let eyecatchImageUrl: string | undefined;
                         if (eyecatchTempPath && noteId && fs.existsSync(eyecatchTempPath)) {
                           try {
-                            console.log(`[publish-from-obsidian-remote] Uploading eyecatch image: ${eyecatchTempPath}`);
+                            console.log(
+                              `[publish-from-obsidian-remote] Uploading eyecatch image: ${eyecatchTempPath}`
+                            );
 
                             // 画像ファイルを読み込み
                             const imageBuffer = fs.readFileSync(eyecatchTempPath);
                             const fileName = path.basename(eyecatchTempPath);
                             const ext = path.extname(eyecatchTempPath).toLowerCase();
                             const mimeTypes: { [key: string]: string } = {
-                              '.jpg': 'image/jpeg',
-                              '.jpeg': 'image/jpeg',
-                              '.png': 'image/png',
-                              '.gif': 'image/gif',
-                              '.webp': 'image/webp',
+                              ".jpg": "image/jpeg",
+                              ".jpeg": "image/jpeg",
+                              ".png": "image/png",
+                              ".gif": "image/gif",
+                              ".webp": "image/webp",
                             };
-                            const mimeType = mimeTypes[ext] || 'image/jpeg';
+                            const mimeType = mimeTypes[ext] || "image/jpeg";
 
                             // /api/v1/upload_image でアップロード
                             const boundary = `----WebKitFormBoundary${Math.random().toString(36).substring(2)}`;
                             const formParts: Buffer[] = [];
 
-                            formParts.push(Buffer.from(
-                              `--${boundary}\r\n` +
-                              `Content-Disposition: form-data; name="file"; filename="${fileName}"\r\n` +
-                              `Content-Type: ${mimeType}\r\n\r\n`
-                            ));
+                            formParts.push(
+                              Buffer.from(
+                                `--${boundary}\r\n` +
+                                  `Content-Disposition: form-data; name="file"; filename="${fileName}"\r\n` +
+                                  `Content-Type: ${mimeType}\r\n\r\n`
+                              )
+                            );
                             formParts.push(imageBuffer);
-                            formParts.push(Buffer.from('\r\n'));
+                            formParts.push(Buffer.from("\r\n"));
                             formParts.push(Buffer.from(`--${boundary}--\r\n`));
 
                             const formData = Buffer.concat(formParts);
 
                             const uploadResponse = await noteApiRequest(
-                              '/v1/upload_image',
-                              'POST',
+                              "/v1/upload_image",
+                              "POST",
                               formData,
                               true,
                               {
-                                'Content-Type': `multipart/form-data; boundary=${boundary}`,
-                                'Content-Length': formData.length.toString(),
-                                'X-Requested-With': 'XMLHttpRequest',
-                                'Referer': 'https://editor.note.com/'
+                                "Content-Type": `multipart/form-data; boundary=${boundary}`,
+                                "Content-Length": formData.length.toString(),
+                                "X-Requested-With": "XMLHttpRequest",
+                                Referer: "https://editor.note.com/",
                               }
                             );
 
                             if (uploadResponse.data && uploadResponse.data.key) {
                               eyecatchImageKey = uploadResponse.data.key;
                               eyecatchImageUrl = uploadResponse.data.url;
-                              console.log(`[publish-from-obsidian-remote] Image uploaded, key: ${eyecatchImageKey}`);
+                              console.log(
+                                `[publish-from-obsidian-remote] Image uploaded, key: ${eyecatchImageKey}`
+                              );
 
                               // 記事を更新してアイキャッチを設定
                               const updateResponse = await noteApiRequest(
                                 `/v1/text_notes/${noteId}`,
-                                'PUT',
+                                "PUT",
                                 {
-                                  eyecatch_image_key: eyecatchImageKey
+                                  eyecatch_image_key: eyecatchImageKey,
                                 },
                                 true,
                                 {
-                                  'Content-Type': 'application/json',
-                                  'X-Requested-With': 'XMLHttpRequest',
-                                  'Referer': editUrl
+                                  "Content-Type": "application/json",
+                                  "X-Requested-With": "XMLHttpRequest",
+                                  Referer: editUrl,
                                 }
                               );
-                              console.log(`[publish-from-obsidian-remote] Eyecatch set successfully`);
+                              console.log(
+                                `[publish-from-obsidian-remote] Eyecatch set successfully`
+                              );
                             } else {
-                              console.error('[publish-from-obsidian-remote] Image upload failed:', uploadResponse);
+                              console.error(
+                                "[publish-from-obsidian-remote] Image upload failed:",
+                                uploadResponse
+                              );
                             }
                           } catch (eyecatchError: any) {
-                            console.error('[publish-from-obsidian-remote] Eyecatch setting failed:', eyecatchError.message);
+                            console.error(
+                              "[publish-from-obsidian-remote] Eyecatch setting failed:",
+                              eyecatchError.message
+                            );
                           }
                         }
 
                         result = {
-                          content: [{
-                            type: "text",
-                            text: JSON.stringify({
-                              success: true,
-                              message: saveAsDraft ? "下書きを作成しました" : "記事を作成しました",
-                              title,
-                              noteUrl,
-                              url: noteUrl,
-                              editUrl,
-                              noteKey,
-                              noteId,
-                              eyecatchImageKey,
-                              eyecatchImageUrl,
-                              imageCount: decodedImages.length,
-                              images: decodedImages.map(i => i.fileName),
-                              tags: tags || []
-                            }, null, 2)
-                          }]
+                          content: [
+                            {
+                              type: "text",
+                              text: JSON.stringify(
+                                {
+                                  success: true,
+                                  message: saveAsDraft
+                                    ? "下書きを作成しました"
+                                    : "記事を作成しました",
+                                  title,
+                                  noteUrl,
+                                  url: noteUrl,
+                                  editUrl,
+                                  noteKey,
+                                  noteId,
+                                  eyecatchImageKey,
+                                  eyecatchImageUrl,
+                                  imageCount: decodedImages.length,
+                                  images: decodedImages.map((i) => i.fileName),
+                                  tags: tags || [],
+                                },
+                                null,
+                                2
+                              ),
+                            },
+                          ],
                         };
                       } catch (error: any) {
                         result = {
-                          content: [{
-                            type: "text",
-                            text: JSON.stringify({
-                              error: "公開に失敗しました",
-                              message: error.message
-                            }, null, 2)
-                          }]
+                          content: [
+                            {
+                              type: "text",
+                              text: JSON.stringify(
+                                {
+                                  error: "公開に失敗しました",
+                                  message: error.message,
+                                },
+                                null,
+                                2
+                              ),
+                            },
+                          ],
                         };
                       } finally {
                         if (tempDir && fs.existsSync(tempDir)) {
                           try {
                             fs.rmSync(tempDir, { recursive: true, force: true });
                           } catch (e) {
-                            console.error('一時ディレクトリの削除に失敗:', e);
+                            console.error("一時ディレクトリの削除に失敗:", e);
                           }
                         }
                       }
                     }
-
                   } else if (name === "insert-images-to-note") {
                     const { imagePaths, noteId, editUrl, headless = false } = args;
 
                     if (!hasAuth()) {
                       result = {
-                        content: [{
-                          type: "text",
-                          text: JSON.stringify({
-                            error: "認証が必要です",
-                            message: "NOTE_EMAILとNOTE_PASSWORDを.envファイルに設定してください"
-                          }, null, 2)
-                        }]
+                        content: [
+                          {
+                            type: "text",
+                            text: JSON.stringify(
+                              {
+                                error: "認証が必要です",
+                                message:
+                                  "NOTE_EMAILとNOTE_PASSWORDを.envファイルに設定してください",
+                              },
+                              null,
+                              2
+                            ),
+                          },
+                        ],
                       };
                     } else {
-                      const missingImages = (imagePaths || []).filter((p: string) => !fs.existsSync(p));
+                      const missingImages = (imagePaths || []).filter(
+                        (p: string) => !fs.existsSync(p)
+                      );
                       if (missingImages.length > 0) {
                         result = {
-                          content: [{
-                            type: "text",
-                            text: JSON.stringify({
-                              error: "画像ファイルが見つかりません",
-                              missingImages
-                            }, null, 2)
-                          }]
+                          content: [
+                            {
+                              type: "text",
+                              text: JSON.stringify(
+                                {
+                                  error: "画像ファイルが見つかりません",
+                                  missingImages,
+                                },
+                                null,
+                                2
+                              ),
+                            },
+                          ],
                         };
                       } else {
                         try {
-                          const normalizedEditUrl = typeof editUrl === 'string' ? editUrl.trim() : undefined;
-                          const normalizedNoteId = typeof noteId === 'string' ? noteId.trim() : undefined;
+                          const normalizedEditUrl =
+                            typeof editUrl === "string" ? editUrl.trim() : undefined;
+                          const normalizedNoteId =
+                            typeof noteId === "string" ? noteId.trim() : undefined;
 
-                          let targetUrl = 'https://editor.note.com/new';
+                          let targetUrl = "https://editor.note.com/new";
                           if (normalizedEditUrl) {
                             targetUrl = normalizedEditUrl;
                           } else if (normalizedNoteId) {
-                            const noteKey = normalizedNoteId.startsWith('n') ? normalizedNoteId : `n${normalizedNoteId}`;
+                            const noteKey = normalizedNoteId.startsWith("n")
+                              ? normalizedNoteId
+                              : `n${normalizedNoteId}`;
                             targetUrl = `https://editor.note.com/notes/${noteKey}/edit/`;
                           }
 
@@ -2426,7 +2733,7 @@ async function startServer(): Promise<void> {
                             const browser = await chromium.launch({ headless, slowMo: 100 });
                             const contextOptions: any = {
                               viewport: { width: 1280, height: 900 },
-                              locale: 'ja-JP'
+                              locale: "ja-JP",
                             };
 
                             if (useStorageState) {
@@ -2437,7 +2744,7 @@ async function startServer(): Promise<void> {
                             const page = await context.newPage();
                             page.setDefaultTimeout(60000);
 
-                            await page.goto(targetUrl, { waitUntil: 'domcontentloaded' });
+                            await page.goto(targetUrl, { waitUntil: "domcontentloaded" });
                             await page.waitForTimeout(3000);
 
                             const currentUrl = page.url();
@@ -2445,7 +2752,7 @@ async function startServer(): Promise<void> {
                               browser,
                               context,
                               page,
-                              isLoggedIn: !currentUrl.includes('/login')
+                              isLoggedIn: !currentUrl.includes("/login"),
                             };
                           };
 
@@ -2457,48 +2764,64 @@ async function startServer(): Promise<void> {
                             page = retry.page;
                             if (!retry.isLoggedIn) {
                               await browser.close();
-                              throw new Error('再ログイン後もエディタにアクセスできません。認証情報を確認してください。');
+                              throw new Error(
+                                "再ログイン後もエディタにアクセスできません。認証情報を確認してください。"
+                              );
                             }
                           }
 
-                          const bodyBox = page.locator('div[contenteditable="true"][role="textbox"]').first();
-                          await bodyBox.waitFor({ state: 'visible' });
+                          const bodyBox = page
+                            .locator('div[contenteditable="true"][role="textbox"]')
+                            .first();
+                          await bodyBox.waitFor({ state: "visible" });
                           await bodyBox.click();
 
-                          const keyCombos = process.platform === 'darwin'
-                            ? ['Meta+ArrowDown', 'End']
-                            : ['Control+End', 'End'];
+                          const keyCombos =
+                            process.platform === "darwin"
+                              ? ["Meta+ArrowDown", "End"]
+                              : ["Control+End", "End"];
                           for (const combo of keyCombos) {
                             try {
                               await page.keyboard.press(combo);
                               break;
-                            } catch {
-                            }
+                            } catch {}
                           }
                           await page.waitForTimeout(300);
 
-                          const insertImageFn = async (pageObj: any, bodyBoxObj: any, imagePath: string) => {
-                            await pageObj.keyboard.press('Enter');
-                            await pageObj.keyboard.press('Enter');
+                          const insertImageFn = async (
+                            pageObj: any,
+                            bodyBoxObj: any,
+                            imagePath: string
+                          ) => {
+                            await pageObj.keyboard.press("Enter");
+                            await pageObj.keyboard.press("Enter");
                             await pageObj.waitForTimeout(500);
 
                             const bodyBoxHandle = await bodyBoxObj.boundingBox();
-                            const allBtns = await pageObj.$$('button');
+                            const allBtns = await pageObj.$$("button");
                             let clicked = false;
 
                             for (const btn of allBtns) {
                               const box = await btn.boundingBox();
                               if (!box) continue;
 
-                              if (bodyBoxHandle &&
+                              if (
+                                bodyBoxHandle &&
                                 box.x > bodyBoxHandle.x - 100 &&
                                 box.x < bodyBoxHandle.x &&
                                 box.y > bodyBoxHandle.y &&
                                 box.y < bodyBoxHandle.y + bodyBoxHandle.height &&
-                                box.width < 60) {
-                                await pageObj.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+                                box.width < 60
+                              ) {
+                                await pageObj.mouse.move(
+                                  box.x + box.width / 2,
+                                  box.y + box.height / 2
+                                );
                                 await pageObj.waitForTimeout(300);
-                                await pageObj.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
+                                await pageObj.mouse.click(
+                                  box.x + box.width / 2,
+                                  box.y + box.height / 2
+                                );
                                 await pageObj.waitForTimeout(1500);
                                 clicked = true;
                                 break;
@@ -2512,9 +2835,11 @@ async function startServer(): Promise<void> {
                               await pageObj.waitForTimeout(1500);
                             }
 
-                            const imageMenuItem = pageObj.locator('[role="menuitem"]:has-text("画像")').first();
+                            const imageMenuItem = pageObj
+                              .locator('[role="menuitem"]:has-text("画像")')
+                              .first();
                             const [chooser] = await Promise.all([
-                              pageObj.waitForEvent('filechooser', { timeout: 10000 }),
+                              pageObj.waitForEvent("filechooser", { timeout: 10000 }),
                               imageMenuItem.click(),
                             ]);
                             await chooser.setFiles(imagePath);
@@ -2522,14 +2847,15 @@ async function startServer(): Promise<void> {
 
                             const dialog = pageObj.locator('div[role="dialog"]');
                             try {
-                              await dialog.waitFor({ state: 'visible', timeout: 5000 });
+                              await dialog.waitFor({ state: "visible", timeout: 5000 });
                               const saveBtn = dialog.locator('button:has-text("保存")').first();
-                              await saveBtn.waitFor({ state: 'visible', timeout: 5000 });
+                              await saveBtn.waitFor({ state: "visible", timeout: 5000 });
                               await saveBtn.click();
-                              await dialog.waitFor({ state: 'hidden', timeout: 10000 }).catch(() => { });
+                              await dialog
+                                .waitFor({ state: "hidden", timeout: 10000 })
+                                .catch(() => {});
                               await pageObj.waitForTimeout(3000);
-                            } catch {
-                            }
+                            } catch {}
                           };
 
                           const insertedImages: string[] = [];
@@ -2543,7 +2869,7 @@ async function startServer(): Promise<void> {
                           }
 
                           const saveBtn = page.locator('button:has-text("下書き保存")').first();
-                          await saveBtn.waitFor({ state: 'visible' });
+                          await saveBtn.waitFor({ state: "visible" });
                           if (await saveBtn.isEnabled()) {
                             await saveBtn.click();
                             await page.waitForTimeout(3000);
@@ -2553,54 +2879,66 @@ async function startServer(): Promise<void> {
                           await browser.close();
 
                           result = {
-                            content: [{
-                              type: "text",
-                              text: JSON.stringify({
-                                success: true,
-                                message: "画像を挿入しました",
-                                noteUrl,
-                                insertedImages,
-                                totalImages: (imagePaths || []).length,
-                                successCount: insertedImages.length
-                              }, null, 2)
-                            }]
+                            content: [
+                              {
+                                type: "text",
+                                text: JSON.stringify(
+                                  {
+                                    success: true,
+                                    message: "画像を挿入しました",
+                                    noteUrl,
+                                    insertedImages,
+                                    totalImages: (imagePaths || []).length,
+                                    successCount: insertedImages.length,
+                                  },
+                                  null,
+                                  2
+                                ),
+                              },
+                            ],
                           };
                         } catch (error: any) {
                           result = {
-                            content: [{
-                              type: "text",
-                              text: JSON.stringify({
-                                error: "画像挿入に失敗しました",
-                                message: error.message
-                              }, null, 2)
-                            }]
+                            content: [
+                              {
+                                type: "text",
+                                text: JSON.stringify(
+                                  {
+                                    error: "画像挿入に失敗しました",
+                                    message: error.message,
+                                  },
+                                  null,
+                                  2
+                                ),
+                              },
+                            ],
                           };
                         }
                       }
                     }
-
                   } else {
                     // その他のツールは未実装
                     result = {
-                      content: [{
-                        type: "text",
-                        text: `ツール '${name}' はまだHTTPトランスポートで実装されていません。stdioトランスポートで利用してください。`
-                      }]
+                      content: [
+                        {
+                          type: "text",
+                          text: `ツール '${name}' はまだHTTPトランスポートで実装されていません。stdioトランスポートで利用してください。`,
+                        },
+                      ],
                     };
                   }
 
                   const response = {
                     jsonrpc: "2.0",
                     id: message.id,
-                    result: result
+                    result: result,
                   };
 
                   // HTTP streaming: 改行区切りでJSONを送信
-                  res.write(JSON.stringify(response) + '\n');
+                  res.write(JSON.stringify(response) + "\n");
                   res.end();
                   console.error(`✅ ツール実行完了: ${name} - HTTP streaming`);
                   return;
-
                 } catch (error) {
                   console.error(`❌ ツール実行エラー:`, error);
                   const errorInfo = {
@@ -2608,7 +2946,7 @@ async function startServer(): Promise<void> {
                     stack: error instanceof Error ? error.stack : "No stack trace available",
                     tool: name,
                     arguments: args,
-                    timestamp: new Date().toISOString()
+                    timestamp: new Date().toISOString(),
                   };
 
                   const response = {
@@ -2617,11 +2955,11 @@ async function startServer(): Promise<void> {
                     error: {
                       code: -32603,
                       message: "Tool execution error",
-                      data: JSON.stringify(errorInfo, null, 2)
-                    }
+                      data: JSON.stringify(errorInfo, null, 2),
+                    },
                   };
                   // HTTP streaming: 改行区切りでJSONを送信
-                  res.write(JSON.stringify(response) + '\n');
+                  res.write(JSON.stringify(response) + "\n");
                   res.end();
                   return;
                 }
@@ -2633,26 +2971,27 @@ async function startServer(): Promise<void> {
                 id: message.id,
                 error: {
                   code: -32601,
-                  message: "Method not found"
-                }
+                  message: "Method not found",
+                },
               };
 
               // HTTP streaming: 改行区切りでJSONを送信
-              res.write(JSON.stringify(response) + '\n');
+              res.write(JSON.stringify(response) + "\n");
               res.end();
               console.error("⚠️ 未対応のメソッド:", message.method);
-
             } catch (error) {
               console.error("❌ JSON-RPC処理エラー:", error);
               res.writeHead(400, { "Content-Type": "application/json" });
               // HTTP streaming: 改行区切りでJSONを送信
-              res.write(JSON.stringify({
-                jsonrpc: "2.0",
-                error: {
-                  code: -32700,
-                  message: "Parse error"
-                }
-              }) + '\n');
+              res.write(
+                JSON.stringify({
+                  jsonrpc: "2.0",
+                  error: {
+                    code: -32700,
+                    message: "Parse error",
+                  },
+                }) + "\n"
+              );
               res.end();
             }
           });
@@ -2671,13 +3010,14 @@ async function startServer(): Promise<void> {
             req.on("close", () => {
               console.error("🔌 SSE接続が閉じられました");
             });
-
           } catch (error) {
             console.error("❌ SSE接続エラー:", error);
             res.writeHead(500, { "Content-Type": "application/json" });
-            res.end(JSON.stringify({
-              error: "SSE connection failed"
-            }));
+            res.end(
+              JSON.stringify({
+                error: "SSE connection failed",
+              })
+            );
           }
 
           return;
@@ -2685,20 +3025,24 @@ async function startServer(): Promise<void> {
 
         res.writeHead(405, {
           "Content-Type": "application/json",
-          "Allow": "GET, POST, OPTIONS, HEAD"
+          Allow: "GET, POST, OPTIONS, HEAD",
         });
-        res.end(JSON.stringify({
-          error: "Method Not Allowed"
-        }));
+        res.end(
+          JSON.stringify({
+            error: "Method Not Allowed",
+          })
+        );
         return;
       }
 
       // 404エラー
       res.writeHead(404, { "Content-Type": "application/json" });
-      res.end(JSON.stringify({
-        error: "Not Found",
-        message: "利用可能なエンドポイント: /health, /mcp, /sse"
-      }));
+      res.end(
+        JSON.stringify({
+          error: "Not Found",
+          message: "利用可能なエンドポイント: /health, /mcp, /sse",
+        })
+      );
     });
 
     // サーバーを起動
@@ -2733,7 +3077,9 @@ async function startServer(): Promise<void> {
 
       console.error("\n🚀 Obsidian連携機能 (v2.1.0 新機能):");
       console.error("  - publish-from-obsidian: Obsidian記事をnoteに公開（ローカル）");
-      console.error("  - publish-from-obsidian-remote: Obsidian記事をnoteに公開（リモート/Base64画像）");
+      console.error(
+        "  - publish-from-obsidian-remote: Obsidian記事をnoteに公開（リモート/Base64画像）"
+      );
       console.error("  - insert-images-to-note: 本文に画像を挿入（Playwright）");
 
       console.error("\n👥 ユーザー機能:");
@@ -2776,7 +3122,6 @@ async function startServer(): Promise<void> {
       }
       process.exit(1);
     });
-
   } catch (error) {
     console.error("◤◢◤◢◤◢◤◢◤◢◤◢◤◢");
     console.error("💥 Fatal error during server startup:");
@@ -2787,7 +3132,7 @@ async function startServer(): Promise<void> {
 }
 
 // メイン処理の実行
-startServer().catch(error => {
+startServer().catch((error) => {
   console.error("◤◢◤◢◤◢◤◢◤◢◤◢◤◢");
   console.error("💥 Fatal error:");
   console.error(error);

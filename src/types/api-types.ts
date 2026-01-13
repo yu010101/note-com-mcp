@@ -17,11 +17,13 @@ export interface FormattedMagazine {
   description: string;
   notesCount: number;
   publishedAt: string;
-  user: string | {
-    id?: string;
-    nickname?: string;
-    urlname?: string;
-  };
+  user:
+    | string
+    | {
+        id?: string;
+        nickname?: string;
+        urlname?: string;
+      };
   url: string;
 }
 

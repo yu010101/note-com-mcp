@@ -7,13 +7,9 @@ import {
   createSuccessResponse,
   createErrorResponse,
   createAuthErrorResponse,
-  handleApiError
+  handleApiError,
 } from "../utils/error-handler.js";
-import {
-  hasAuth,
-  buildAuthHeaders,
-  getPreviewAccessToken,
-} from "../utils/auth.js";
+import { hasAuth, buildAuthHeaders, getPreviewAccessToken } from "../utils/auth.js";
 import { env } from "../config/environment.js";
 import { randomUUID } from "crypto";
 import fs from "fs";
@@ -32,7 +28,7 @@ export function registerNoteTools(server: McpServer) {
         const params = new URLSearchParams({
           draft: "true",
           draft_reedit: "false",
-          ts: Date.now().toString()
+          ts: Date.now().toString(),
         });
 
         const data = await noteApiRequest(
@@ -45,14 +41,14 @@ export function registerNoteTools(server: McpServer) {
         const noteData = data.data || {};
 
         // デバッグ用にAPIレスポンスをログ出力
-        console.log('Raw API response from note-tools:', JSON.stringify(noteData, null, 2));
+        console.log("Raw API response from note-tools:", JSON.stringify(noteData, null, 2));
 
         // formatNote関数を使って完全なレスポンスを生成
         const formattedNote = formatNote(
           noteData,
-          noteData.user?.urlname || '',
+          noteData.user?.urlname || "",
           true, // includeUserDetails
-          true  // analyzeContent
+          true // analyzeContent
         );
 
         return createSuccessResponse(formattedNote);
@@ -79,7 +75,7 @@ export function registerNoteTools(server: McpServer) {
         }
 
         return createSuccessResponse({
-          comments: formattedComments
+          comments: formattedComments,
         });
       } catch (error) {
         return handleApiError(error, "コメント取得");
@@ -104,7 +100,7 @@ export function registerNoteTools(server: McpServer) {
         }
 
         return createSuccessResponse({
-          likes: formattedLikes
+          likes: formattedLikes,
         });
       } catch (error) {
         return handleApiError(error, "スキ一覧取得");
@@ -147,7 +143,7 @@ export function registerNoteTools(server: McpServer) {
             body_length: 0,
             name: title || "無題",
             index: false,
-            is_lead_form: false
+            is_lead_form: false,
           };
 
           const headers = buildCustomHeaders();
@@ -177,7 +173,7 @@ export function registerNoteTools(server: McpServer) {
           body_length: (body || "").length,
           name: title || "無題",
           index: false,
-          is_lead_form: false
+          is_lead_form: false,
         };
 
         const headers = buildCustomHeaders();
@@ -197,9 +193,8 @@ export function registerNoteTools(server: McpServer) {
           noteId: id,
           noteKey: noteKey,
           editUrl: `https://editor.note.com/notes/${noteKey}/edit/`,
-          data: data
+          data: data,
         });
-
       } catch (error) {
         console.error(`下書き保存処理でエラー: ${error}`);
         return handleApiError(error, "記事下書き保存");
@@ -214,11 +209,16 @@ export function registerNoteTools(server: McpServer) {
     {
       title: z.string().describe("記事のタイトル"),
       body: z.string().describe("記事の本文（Markdown形式、![[image.png]]形式の画像参照を含む）"),
-      images: z.array(z.object({
-        fileName: z.string().describe("ファイル名（例: image.png）"),
-        base64: z.string().describe("Base64エンコードされた画像データ"),
-        mimeType: z.string().optional().describe("MIMEタイプ（例: image/png）")
-      })).optional().describe("Base64エンコードされた画像の配列"),
+      images: z
+        .array(
+          z.object({
+            fileName: z.string().describe("ファイル名（例: image.png）"),
+            base64: z.string().describe("Base64エンコードされた画像データ"),
+            mimeType: z.string().optional().describe("MIMEタイプ（例: image/png）"),
+          })
+        )
+        .optional()
+        .describe("Base64エンコードされた画像の配列"),
       tags: z.array(z.string()).optional().describe("タグ（最大10個）"),
       id: z.string().optional().describe("既存の下書きID（既存の下書きを更新する場合）"),
     },
@@ -245,31 +245,33 @@ export function registerNoteTools(server: McpServer) {
 
           for (const img of images) {
             try {
-              const imageBuffer = Buffer.from(img.base64, 'base64');
+              const imageBuffer = Buffer.from(img.base64, "base64");
               const fileName = img.fileName;
-              const mimeType = img.mimeType || 'image/png';
+              const mimeType = img.mimeType || "image/png";
 
               // Step 1: Presigned URLを取得
               const boundary1 = `----WebKitFormBoundary${Math.random().toString(36).substring(2)}`;
               const presignFormParts: Buffer[] = [];
-              presignFormParts.push(Buffer.from(
-                `--${boundary1}\r\n` +
-                `Content-Disposition: form-data; name="filename"\r\n\r\n` +
-                `${fileName}\r\n`
-              ));
+              presignFormParts.push(
+                Buffer.from(
+                  `--${boundary1}\r\n` +
+                    `Content-Disposition: form-data; name="filename"\r\n\r\n` +
+                    `${fileName}\r\n`
+                )
+              );
               presignFormParts.push(Buffer.from(`--${boundary1}--\r\n`));
               const presignFormData = Buffer.concat(presignFormParts);
 
               const presignResponse = await noteApiRequest(
-                '/v3/images/upload/presigned_post',
-                'POST',
+                "/v3/images/upload/presigned_post",
+                "POST",
                 presignFormData,
                 true,
                 {
-                  'Content-Type': `multipart/form-data; boundary=${boundary1}`,
-                  'Content-Length': presignFormData.length.toString(),
-                  'X-Requested-With': 'XMLHttpRequest',
-                  'Referer': 'https://editor.note.com/'
+                  "Content-Type": `multipart/form-data; boundary=${boundary1}`,
+                  "Content-Length": presignFormData.length.toString(),
+                  "X-Requested-With": "XMLHttpRequest",
+                  Referer: "https://editor.note.com/",
                 }
               );
 
@@ -284,35 +286,48 @@ export function registerNoteTools(server: McpServer) {
               const boundary2 = `----WebKitFormBoundary${Math.random().toString(36).substring(2)}`;
               const s3FormParts: Buffer[] = [];
 
-              const paramOrder = ['key', 'acl', 'Expires', 'policy', 'x-amz-credential', 'x-amz-algorithm', 'x-amz-date', 'x-amz-signature'];
+              const paramOrder = [
+                "key",
+                "acl",
+                "Expires",
+                "policy",
+                "x-amz-credential",
+                "x-amz-algorithm",
+                "x-amz-date",
+                "x-amz-signature",
+              ];
               for (const key of paramOrder) {
                 if (s3Params[key]) {
-                  s3FormParts.push(Buffer.from(
-                    `--${boundary2}\r\n` +
-                    `Content-Disposition: form-data; name="${key}"\r\n\r\n` +
-                    `${s3Params[key]}\r\n`
-                  ));
+                  s3FormParts.push(
+                    Buffer.from(
+                      `--${boundary2}\r\n` +
+                        `Content-Disposition: form-data; name="${key}"\r\n\r\n` +
+                        `${s3Params[key]}\r\n`
+                    )
+                  );
                 }
               }
 
-              s3FormParts.push(Buffer.from(
-                `--${boundary2}\r\n` +
-                `Content-Disposition: form-data; name="file"; filename="${fileName}"\r\n` +
-                `Content-Type: ${mimeType}\r\n\r\n`
-              ));
+              s3FormParts.push(
+                Buffer.from(
+                  `--${boundary2}\r\n` +
+                    `Content-Disposition: form-data; name="file"; filename="${fileName}"\r\n` +
+                    `Content-Type: ${mimeType}\r\n\r\n`
+                )
+              );
               s3FormParts.push(imageBuffer);
-              s3FormParts.push(Buffer.from('\r\n'));
+              s3FormParts.push(Buffer.from("\r\n"));
               s3FormParts.push(Buffer.from(`--${boundary2}--\r\n`));
 
               const s3FormData = Buffer.concat(s3FormParts);
 
               const s3Response = await fetch(s3Url, {
-                method: 'POST',
+                method: "POST",
                 headers: {
-                  'Content-Type': `multipart/form-data; boundary=${boundary2}`,
-                  'Content-Length': s3FormData.length.toString()
+                  "Content-Type": `multipart/form-data; boundary=${boundary2}`,
+                  "Content-Length": s3FormData.length.toString(),
                 },
-                body: s3FormData
+                body: s3FormData,
               });
 
               if (!s3Response.ok && s3Response.status !== 204) {
@@ -322,7 +337,6 @@ export function registerNoteTools(server: McpServer) {
 
               uploadedImages.set(fileName, finalImageUrl);
               console.error(`画像アップロード成功: ${fileName} -> ${finalImageUrl}`);
-
             } catch (e: any) {
               console.error(`画像アップロードエラー: ${img.fileName}`, e.message);
             }
@@ -368,7 +382,7 @@ export function registerNoteTools(server: McpServer) {
               const imageUrl = uploadedImages.get(baseName)!;
               const uuid1 = randomUUID();
               const uuid2 = randomUUID();
-              return `<figure name="${uuid1}" id="${uuid2}"><img src="${imageUrl}" alt="" width="620" height="auto"><figcaption>${caption || ''}</figcaption></figure>`;
+              return `<figure name="${uuid1}" id="${uuid2}"><img src="${imageUrl}" alt="" width="620" height="auto"><figcaption>${caption || ""}</figcaption></figure>`;
             }
             return match;
           }
@@ -378,13 +392,13 @@ export function registerNoteTools(server: McpServer) {
         processedBody = processedBody.replace(
           /!\[([^\]]*)\]\(([^)]+)\)/g,
           (match, alt, srcPath) => {
-            if (srcPath.startsWith('http')) return match;
+            if (srcPath.startsWith("http")) return match;
             const baseName = path.basename(srcPath);
             if (uploadedImages.has(baseName)) {
               const imageUrl = uploadedImages.get(baseName)!;
               const uuid1 = randomUUID();
               const uuid2 = randomUUID();
-              return `<figure name="${uuid1}" id="${uuid2}"><img src="${imageUrl}" alt="" width="620" height="auto"><figcaption>${alt || ''}</figcaption></figure>`;
+              return `<figure name="${uuid1}" id="${uuid2}"><img src="${imageUrl}" alt="" width="620" height="auto"><figcaption>${alt || ""}</figcaption></figure>`;
             }
             return match;
           }
@@ -399,7 +413,7 @@ export function registerNoteTools(server: McpServer) {
             body_length: 0,
             name: title || "無題",
             index: false,
-            is_lead_form: false
+            is_lead_form: false,
           };
 
           const headers = buildCustomHeaders();
@@ -451,7 +465,7 @@ export function registerNoteTools(server: McpServer) {
           body_length: (htmlBody || "").length,
           name: title || "無題",
           index: false,
-          is_lead_form: false
+          is_lead_form: false,
         };
 
         const headers = buildCustomHeaders();
@@ -471,11 +485,13 @@ export function registerNoteTools(server: McpServer) {
           noteId: id,
           noteKey: noteKey,
           editUrl: `https://editor.note.com/notes/${noteKey}/edit/`,
-          uploadedImages: Array.from(uploadedImages.entries()).map(([name, url]) => ({ name, url })),
+          uploadedImages: Array.from(uploadedImages.entries()).map(([name, url]) => ({
+            name,
+            url,
+          })),
           imageCount: uploadedImages.size,
-          data: data
+          data: data,
         });
-
       } catch (error) {
         console.error(`画像付き下書き保存処理でエラー: ${error}`);
         return handleApiError(error, "画像付き記事下書き保存");
@@ -492,7 +508,11 @@ export function registerNoteTools(server: McpServer) {
       title: z.string().describe("記事のタイトル"),
       body: z.string().describe("記事の本文"),
       tags: z.array(z.string()).optional().describe("タグ（最大10個）"),
-      isDraft: z.boolean().optional().default(true).describe("下書き状態で保存するか（trueの場合下書き、falseの場合は公開）"),
+      isDraft: z
+        .boolean()
+        .optional()
+        .default(true)
+        .describe("下書き状態で保存するか（trueの場合下書き、falseの場合は公開）"),
     },
     async ({ noteId, title, body, tags, isDraft }) => {
       try {
@@ -506,7 +526,7 @@ export function registerNoteTools(server: McpServer) {
         try {
           // noteIdから数値IDを抽出（get-noteで取得したidを使用）
           let numericId: string;
-          if (noteId.startsWith('n')) {
+          if (noteId.startsWith("n")) {
             // 文字列IDの場合、まず記事情報を取得して数値IDを取得
             const noteInfo = await noteApiRequest(`/v3/notes/${noteId}`, "GET", null, true);
             numericId = noteInfo.id?.toString() || noteId;
@@ -518,7 +538,7 @@ export function registerNoteTools(server: McpServer) {
             title: title,
             body: body,
             status: isDraft ? "draft" : "published",
-            tags: tags || []
+            tags: tags || [],
           };
 
           const headers = buildAuthHeaders();
@@ -532,7 +552,7 @@ export function registerNoteTools(server: McpServer) {
             success: true,
             data: data,
             message: isDraft ? "記事を下書き保存しました" : "記事を公開しました",
-            noteId: noteId
+            noteId: noteId,
           });
         } catch (error) {
           console.error(`PUT API編集エラー: ${error}`);
@@ -569,7 +589,7 @@ export function registerNoteTools(server: McpServer) {
           const params = new URLSearchParams({
             draft: "true",
             draft_reedit: "false",
-            ts: Date.now().toString()
+            ts: Date.now().toString(),
           });
 
           const noteData = await noteApiRequest(
@@ -595,7 +615,7 @@ export function registerNoteTools(server: McpServer) {
             publish_at: null,
             eyecatch_image: currentNote.eyecatch_image || null,
             price: currentNote.price || 0,
-            is_magazine_note: currentNote.is_magazine_note || false
+            is_magazine_note: currentNote.is_magazine_note || false,
           };
 
           const endpoint = `/v3/notes/${noteId}/publish`;
@@ -608,7 +628,7 @@ export function registerNoteTools(server: McpServer) {
             data: data,
             message: "記事を公開しました",
             noteId: noteId,
-            noteUrl: data.data?.url || `https://note.com/${env.NOTE_USER_ID}/n/${noteId}`
+            noteUrl: data.data?.url || `https://note.com/${env.NOTE_USER_ID}/n/${noteId}`,
           });
         } catch (error) {
           console.error(`公開エラー: ${error}`);
@@ -641,7 +661,7 @@ export function registerNoteTools(server: McpServer) {
 
         return createSuccessResponse({
           message: "コメントを投稿しました",
-          data: data
+          data: data,
         });
       } catch (error) {
         return handleApiError(error, "コメント投稿");
@@ -665,7 +685,7 @@ export function registerNoteTools(server: McpServer) {
         await noteApiRequest(`/v3/notes/${noteId}/likes`, "POST", {}, true);
 
         return createSuccessResponse({
-          message: "スキをつけました"
+          message: "スキをつけました",
         });
       } catch (error) {
         return handleApiError(error, "スキ");
@@ -689,7 +709,7 @@ export function registerNoteTools(server: McpServer) {
         await noteApiRequest(`/v3/notes/${noteId}/likes`, "DELETE", {}, true);
 
         return createSuccessResponse({
-          message: "スキを削除しました"
+          message: "スキを削除しました",
         });
       } catch (error) {
         return handleApiError(error, "スキ削除");
@@ -704,12 +724,17 @@ export function registerNoteTools(server: McpServer) {
     {
       page: z.number().default(1).describe("ページ番号（デフォルト: 1）"),
       perPage: z.number().default(20).describe("1ページあたりの表示件数（デフォルト: 20）"),
-      status: z.enum(["all", "draft", "public"]).default("all").describe("記事の状態フィルター（all:すべて, draft:下書きのみ, public:公開済みのみ）"),
+      status: z
+        .enum(["all", "draft", "public"])
+        .default("all")
+        .describe("記事の状態フィルター（all:すべて, draft:下書きのみ, public:公開済みのみ）"),
     },
     async ({ page, perPage, status }) => {
       try {
         if (!env.NOTE_USER_ID) {
-          return createErrorResponse("環境変数 NOTE_USER_ID が設定されていません。.envファイルを確認してください。");
+          return createErrorResponse(
+            "環境変数 NOTE_USER_ID が設定されていません。.envファイルを確認してください。"
+          );
         }
 
         const params = new URLSearchParams({
@@ -717,7 +742,7 @@ export function registerNoteTools(server: McpServer) {
           per_page: perPage.toString(),
           draft: "true",
           draft_reedit: "false",
-          ts: Date.now().toString()
+          ts: Date.now().toString(),
         });
 
         if (status === "draft") {
@@ -751,15 +776,17 @@ export function registerNoteTools(server: McpServer) {
 
             let excerpt = "";
             if (note.body) {
-              excerpt = note.body.length > 100 ? note.body.substring(0, 100) + '...' : note.body;
+              excerpt = note.body.length > 100 ? note.body.substring(0, 100) + "..." : note.body;
             } else if (note.peekBody) {
               excerpt = note.peekBody;
             } else if (note.noteDraft?.body) {
-              const textContent = note.noteDraft.body.replace(/<[^>]*>/g, '');
-              excerpt = textContent.length > 100 ? textContent.substring(0, 100) + '...' : textContent;
+              const textContent = note.noteDraft.body.replace(/<[^>]*>/g, "");
+              excerpt =
+                textContent.length > 100 ? textContent.substring(0, 100) + "..." : textContent;
             }
 
-            const publishedAt = note.publishAt || note.publish_at || note.displayDate || note.createdAt || '日付不明';
+            const publishedAt =
+              note.publishAt || note.publish_at || note.displayDate || note.createdAt || "日付不明";
 
             return {
               id: noteId,
@@ -779,8 +806,8 @@ export function registerNoteTools(server: McpServer) {
               user: {
                 id: note.user?.id || env.NOTE_USER_ID,
                 name: note.user?.name || note.user?.nickname || "",
-                urlname: note.user?.urlname || env.NOTE_USER_ID
-              }
+                urlname: note.user?.urlname || env.NOTE_USER_ID,
+              },
             };
           });
         }
@@ -797,7 +824,7 @@ export function registerNoteTools(server: McpServer) {
           hasPreviousPage: page > 1,
           draftCount: formattedNotes.filter((note: any) => note.isDraft).length,
           publicCount: formattedNotes.filter((note: any) => !note.isDraft).length,
-          notes: formattedNotes
+          notes: formattedNotes,
         });
       } catch (error) {
         return handleApiError(error, "記事一覧取得");
@@ -815,7 +842,9 @@ export function registerNoteTools(server: McpServer) {
     async ({ noteId }) => {
       try {
         if (!env.NOTE_USER_ID) {
-          return createErrorResponse("環境変数 NOTE_USER_ID が設定されていません。.envファイルを確認してください。");
+          return createErrorResponse(
+            "環境変数 NOTE_USER_ID が設定されていません。.envファイルを確認してください。"
+          );
         }
 
         const editUrl = `https://editor.note.com/notes/${noteId}/edit/`;
@@ -823,7 +852,7 @@ export function registerNoteTools(server: McpServer) {
         return createSuccessResponse({
           status: "success",
           editUrl: editUrl,
-          message: `編集ページのURLを生成しました。以下のURLを開いてください：\n${editUrl}`
+          message: `編集ページのURLを生成しました。以下のURLを開いてください：\n${editUrl}`,
         });
       } catch (error) {
         return handleApiError(error, "編集ページURL生成");

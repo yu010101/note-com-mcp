@@ -2,10 +2,7 @@ import { z } from "zod";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { noteApiRequest } from "../utils/api-client.js";
 import { formatUser, formatNote } from "../utils/formatters.js";
-import { 
-  createSuccessResponse, 
-  handleApiError 
-} from "../utils/error-handler.js";
+import { createSuccessResponse, handleApiError } from "../utils/error-handler.js";
 import { env } from "../config/environment.js";
 
 export function registerUserTools(server: McpServer) {
@@ -21,11 +18,11 @@ export function registerUserTools(server: McpServer) {
         const data = await noteApiRequest(`/v2/creators/${username}`);
 
         const userData = data.data || {};
-        
+
         if (env.DEBUG) {
           console.error(`User API Response: ${JSON.stringify(data, null, 2)}`);
         }
-        
+
         const formattedUser = formatUser(userData);
 
         return createSuccessResponse(formattedUser);
@@ -45,19 +42,19 @@ export function registerUserTools(server: McpServer) {
     },
     async ({ username, page }) => {
       try {
-        const data = await noteApiRequest(`/v2/creators/${username}/contents?kind=note&page=${page}`);
+        const data = await noteApiRequest(
+          `/v2/creators/${username}/contents?kind=note&page=${page}`
+        );
 
         let formattedNotes: any[] = [];
         if (data.data && data.data.contents) {
-          formattedNotes = data.data.contents.map((note: any) => 
-            formatNote(note, username)
-          );
+          formattedNotes = data.data.contents.map((note: any) => formatNote(note, username));
         }
 
         return createSuccessResponse({
           total: data.data?.totalCount || 0,
           limit: data.data?.limit || 0,
-          notes: formattedNotes
+          notes: formattedNotes,
         });
       } catch (error) {
         return handleApiError(error, "ユーザー記事一覧取得");
@@ -72,32 +69,41 @@ export function registerUserTools(server: McpServer) {
     {
       category: z.string().describe("カテゴリー名（例: tech）"),
       page: z.number().default(1).describe("ページ番号"),
-      sort: z.enum(["new", "trend"]).default("new").describe("ソート方法（new: 新着順, trend: 人気順）"),
+      sort: z
+        .enum(["new", "trend"])
+        .default("new")
+        .describe("ソート方法（new: 新着順, trend: 人気順）"),
     },
     async ({ category, page, sort }) => {
       try {
-        const data = await noteApiRequest(`/v1/categories/${category}?note_intro_only=true&sort=${sort}&page=${page}`);
+        const data = await noteApiRequest(
+          `/v1/categories/${category}?note_intro_only=true&sort=${sort}&page=${page}`
+        );
 
         let formattedNotes: any[] = [];
         if (data.data && data.data.notes && Array.isArray(data.data.notes)) {
           formattedNotes = data.data.notes.map((note: any) => ({
             id: note.id || "",
             title: note.name || "",
-            excerpt: note.body ? (note.body.length > 100 ? note.body.substring(0, 100) + '...' : note.body) : '本文なし',
+            excerpt: note.body
+              ? note.body.length > 100
+                ? note.body.substring(0, 100) + "..."
+                : note.body
+              : "本文なし",
             user: {
               nickname: note.user?.nickname || "",
-              urlname: note.user?.urlname || ""
+              urlname: note.user?.urlname || "",
             },
-            publishedAt: note.publishAt || '日付不明',
+            publishedAt: note.publishAt || "日付不明",
             likesCount: note.likeCount || 0,
-            url: `https://note.com/${note.user?.urlname || ''}/n/${note.key || ''}`
+            url: `https://note.com/${note.user?.urlname || ""}/n/${note.key || ""}`,
           }));
         }
 
         return createSuccessResponse({
           category,
           page,
-          notes: formattedNotes
+          notes: formattedNotes,
         });
       } catch (error) {
         return handleApiError(error, "カテゴリー記事取得");
@@ -116,7 +122,12 @@ export function registerUserTools(server: McpServer) {
     },
     async ({ filter, page, sort }) => {
       try {
-        const data = await noteApiRequest(`/v1/stats/pv?filter=${filter}&page=${page}&sort=${sort}`, "GET", null, true);
+        const data = await noteApiRequest(
+          `/v1/stats/pv?filter=${filter}&page=${page}&sort=${sort}`,
+          "GET",
+          null,
+          true
+        );
 
         return createSuccessResponse(data);
       } catch (error) {
@@ -126,33 +137,23 @@ export function registerUserTools(server: McpServer) {
   );
 
   // 5. その他の管理系ツール
-  server.tool(
-    "list-categories",
-    "カテゴリー一覧を取得する",
-    {},
-    async () => {
-      try {
-        const data = await noteApiRequest(`/v2/categories`, "GET");
-        return createSuccessResponse(data.data || data);
-      } catch (error) {
-        return handleApiError(error, "カテゴリー取得");
-      }
+  server.tool("list-categories", "カテゴリー一覧を取得する", {}, async () => {
+    try {
+      const data = await noteApiRequest(`/v2/categories`, "GET");
+      return createSuccessResponse(data.data || data);
+    } catch (error) {
+      return handleApiError(error, "カテゴリー取得");
     }
-  );
+  });
 
-  server.tool(
-    "list-hashtags",
-    "ハッシュタグ一覧を取得する",
-    {},
-    async () => {
-      try {
-        const data = await noteApiRequest(`/v2/hashtags`, "GET");
-        return createSuccessResponse(data.data || data);
-      } catch (error) {
-        return handleApiError(error, "ハッシュタグ一覧取得");
-      }
+  server.tool("list-hashtags", "ハッシュタグ一覧を取得する", {}, async () => {
+    try {
+      const data = await noteApiRequest(`/v2/hashtags`, "GET");
+      return createSuccessResponse(data.data || data);
+    } catch (error) {
+      return handleApiError(error, "ハッシュタグ一覧取得");
     }
-  );
+  });
 
   server.tool(
     "get-hashtag",
@@ -168,45 +169,30 @@ export function registerUserTools(server: McpServer) {
     }
   );
 
-  server.tool(
-    "get-search-history",
-    "検索履歴を取得する",
-    {},
-    async () => {
-      try {
-        const data = await noteApiRequest(`/v2/search_histories`, "GET");
-        return createSuccessResponse(data.data || data);
-      } catch (error) {
-        return handleApiError(error, "検索履歴取得");
-      }
+  server.tool("get-search-history", "検索履歴を取得する", {}, async () => {
+    try {
+      const data = await noteApiRequest(`/v2/search_histories`, "GET");
+      return createSuccessResponse(data.data || data);
+    } catch (error) {
+      return handleApiError(error, "検索履歴取得");
     }
-  );
+  });
 
-  server.tool(
-    "list-contests",
-    "コンテスト一覧を取得する",
-    {},
-    async () => {
-      try {
-        const data = await noteApiRequest(`/v2/contests`, "GET");
-        return createSuccessResponse(data.data || data);
-      } catch (error) {
-        return handleApiError(error, "コンテスト取得");
-      }
+  server.tool("list-contests", "コンテスト一覧を取得する", {}, async () => {
+    try {
+      const data = await noteApiRequest(`/v2/contests`, "GET");
+      return createSuccessResponse(data.data || data);
+    } catch (error) {
+      return handleApiError(error, "コンテスト取得");
     }
-  );
+  });
 
-  server.tool(
-    "get-notice-counts",
-    "通知件数を取得する",
-    {},
-    async () => {
-      try {
-        const data = await noteApiRequest(`/v3/notice_counts`, "GET");
-        return createSuccessResponse(data.data || data);
-      } catch (error) {
-        return handleApiError(error, "通知件数取得");
-      }
+  server.tool("get-notice-counts", "通知件数を取得する", {}, async () => {
+    try {
+      const data = await noteApiRequest(`/v3/notice_counts`, "GET");
+      return createSuccessResponse(data.data || data);
+    } catch (error) {
+      return handleApiError(error, "通知件数取得");
     }
-  );
+  });
 }

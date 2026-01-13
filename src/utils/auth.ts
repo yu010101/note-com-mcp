@@ -57,8 +57,9 @@ export async function loginToNote(): Promise<boolean> {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/96.0.4664.110 Safari/537.36",
-        "Accept": "application/json",
+        "User-Agent":
+          "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/96.0.4664.110 Safari/537.36",
+        Accept: "application/json",
       },
       body: JSON.stringify({ login: env.NOTE_EMAIL, password: env.NOTE_PASSWORD }),
     });
@@ -66,7 +67,9 @@ export async function loginToNote(): Promise<boolean> {
     const responseText = await response.text();
     if (env.DEBUG) {
       console.error(`Login response: ${response.status} ${response.statusText}`);
-      console.error(`Login response headers: ${JSON.stringify(Object.fromEntries(response.headers.entries()))}`);
+      console.error(
+        `Login response headers: ${JSON.stringify(Object.fromEntries(response.headers.entries()))}`
+      );
       console.error(`Login response body: ${responseText}`);
     }
 
@@ -84,7 +87,8 @@ export async function loginToNote(): Promise<boolean> {
       }
       if (responseData && responseData.data && responseData.data.token) {
         activeSessionCookie = `_note_session_v5=${responseData.data.token}`;
-        if (env.DEBUG) console.error("Session token found in response body:", responseData.data.token);
+        if (env.DEBUG)
+          console.error("Session token found in response body:", responseData.data.token);
         console.error("Login successful. Session token obtained from response body.");
       }
     } catch (e) {
@@ -97,14 +101,14 @@ export async function loginToNote(): Promise<boolean> {
       // console.error(`>>> Before final log: activeXsrfToken = ${activeXsrfToken}`);
       console.error("Set-Cookie header:", setCookieHeader);
       const cookies = Array.isArray(setCookieHeader) ? setCookieHeader : [setCookieHeader];
-      cookies.forEach(cookieStr => {
+      cookies.forEach((cookieStr) => {
         if (cookieStr.includes("_note_session_v5=")) {
           // セッションCookieを保存
-          activeSessionCookie = cookieStr.split(';')[0];
+          activeSessionCookie = cookieStr.split(";")[0];
           console.error("Session cookie set:", activeSessionCookie);
         } else if (cookieStr.includes("XSRF-TOKEN=")) {
           // XSRFトークンを保存（Cookieから）
-          const tokenValue = cookieStr.split(';')[0].split('=')[1];
+          const tokenValue = cookieStr.split(";")[0].split("=")[1];
           activeXsrfToken = decodeURIComponent(tokenValue);
           console.error("XSRF token set from cookie:", activeXsrfToken);
         }
@@ -135,9 +139,10 @@ export async function loginToNote(): Promise<boolean> {
         const currentUserResponse = await fetch(`${API_BASE_URL}/api/v2/current_user`, {
           method: "GET",
           headers: {
-            "Accept": "application/json",
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/96.0.4664.110 Safari/537.36",
-            "Cookie": activeSessionCookie
+            Accept: "application/json",
+            "User-Agent":
+              "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/96.0.4664.110 Safari/537.36",
+            Cookie: activeSessionCookie,
           },
         });
 
@@ -152,10 +157,12 @@ export async function loginToNote(): Promise<boolean> {
           const currentUserSetCookieHeader = currentUserResponse.headers.get("set-cookie");
           // console.log(`>>> current_user API response Set-Cookie header: ${currentUserSetCookieHeader}`);
           if (currentUserSetCookieHeader) {
-            const cookies = Array.isArray(currentUserSetCookieHeader) ? currentUserSetCookieHeader : [currentUserSetCookieHeader];
-            cookies.forEach(cookieStr => {
+            const cookies = Array.isArray(currentUserSetCookieHeader)
+              ? currentUserSetCookieHeader
+              : [currentUserSetCookieHeader];
+            cookies.forEach((cookieStr) => {
               if (cookieStr.includes("XSRF-TOKEN=")) {
-                activeXsrfToken = decodeURIComponent(cookieStr.split(';')[0].split('=')[1]);
+                activeXsrfToken = decodeURIComponent(cookieStr.split(";")[0].split("=")[1]);
                 console.error("XSRF token found in current_user response cookies.");
                 if (env.DEBUG) console.error("XSRF Token from cookie:", activeXsrfToken);
               }
@@ -179,7 +186,9 @@ export async function loginToNote(): Promise<boolean> {
     if (activeSessionCookie && activeXsrfToken) {
       console.error("Session cookie and XSRF token successfully obtained/confirmed.");
     } else if (activeSessionCookie) {
-      console.warn("Session cookie obtained, but XSRF token is missing. Further operations might fail.");
+      console.warn(
+        "Session cookie obtained, but XSRF token is missing. Further operations might fail."
+      );
     } else {
       console.error("Failed to obtain session cookie. Login is considered unsuccessful.");
       return false; // Explicitly return false if session cookie is not obtained
@@ -207,12 +216,12 @@ export function buildAuthHeaders(): { [key: string]: string } {
   } else if (process.env.NOTE_ALL_COOKIES) {
     // すべてのCookieを使用（参照記事の方式）
     // XSRF-TOKENはヘッダーで送るのでCookieからは除外
-    const cookiesWithoutXsrf = process.env.NOTE_ALL_COOKIES
-      .split('; ')
-      .filter(c => !c.startsWith('XSRF-TOKEN='))
-      .join('; ');
+    const cookiesWithoutXsrf = process.env.NOTE_ALL_COOKIES.split("; ")
+      .filter((c) => !c.startsWith("XSRF-TOKEN="))
+      .join("; ");
     headers["Cookie"] = cookiesWithoutXsrf;
-    if (env.DEBUG) console.error("Using all cookies from .env file for Cookie header (XSRF-TOKEN excluded)");
+    if (env.DEBUG)
+      console.error("Using all cookies from .env file for Cookie header (XSRF-TOKEN excluded)");
   } else if (env.NOTE_SESSION_V5) {
     // .envファイルのセッションCookieを使用
     cookies.push(`_note_session_v5=${env.NOTE_SESSION_V5}`);
@@ -233,7 +242,8 @@ export function buildAuthHeaders(): { [key: string]: string } {
   }
 
   // User-Agentは常に設定
-  headers["User-Agent"] = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/96.0.4664.110 Safari/537.36";
+  headers["User-Agent"] =
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/96.0.4664.110 Safari/537.36";
 
   return headers;
 }
@@ -251,7 +261,7 @@ export async function getPreviewAccessToken(noteId: string): Promise<string | nu
 
   const url = `${API_BASE_URL}/api/v2/notes/${noteId}/access_tokens`;
   const headers = buildAuthHeaders(); // これには Cookie と X-XSRF-TOKEN が含まれる
-  headers['Content-Type'] = 'application/json'; // POSTリクエストのため
+  headers["Content-Type"] = "application/json"; // POSTリクエストのため
 
   if (env.DEBUG) {
     console.error(`Attempting to get preview_access_token for noteId ${noteId} from ${url}`);
@@ -262,18 +272,22 @@ export async function getPreviewAccessToken(noteId: string): Promise<string | nu
     const response = await fetch(url, {
       method: "POST", // ユーザーの分析に基づきPOSTメソッドを使用
       headers: headers,
-      body: JSON.stringify({}) // 空のJSONボディと仮定
+      body: JSON.stringify({}), // 空のJSONボディと仮定
     });
 
     const responseText = await response.text();
     if (env.DEBUG) {
       console.error(`PreviewAccessToken API response: ${response.status} ${response.statusText}`);
-      console.error(`PreviewAccessToken API response headers: ${JSON.stringify(Object.fromEntries(response.headers.entries()))}`);
+      console.error(
+        `PreviewAccessToken API response headers: ${JSON.stringify(Object.fromEntries(response.headers.entries()))}`
+      );
       console.error(`PreviewAccessToken API response body: ${responseText}`);
     }
 
     if (!response.ok) {
-      console.error(`Failed to get preview_access_token: ${response.status} ${response.statusText} - ${responseText}`);
+      console.error(
+        `Failed to get preview_access_token: ${response.status} ${response.statusText} - ${responseText}`
+      );
       return null;
     }
 
