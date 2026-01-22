@@ -133,10 +133,20 @@ export function parseMarkdown(markdown: string): MarkdownElement[] {
       continue;
     }
 
-    // 引用
-    if (line.startsWith("> ")) {
-      elements.push({ type: "quote", content: line.slice(2).trim() });
-      i++;
+    // 引用（複数行対応、スペースなしの形式も対応）
+    // "> text" または ">text" の両方に対応
+    if (line.match(/^>\s?/)) {
+      const quoteLines: string[] = [];
+      while (i < lines.length && lines[i].match(/^>\s?/)) {
+        // ">" の後のスペースを除去してテキストを取得
+        quoteLines.push(lines[i].replace(/^>\s?/, "").trim());
+        i++;
+      }
+      // 空行のみの引用は除外
+      const filteredLines = quoteLines.filter((l) => l.length > 0);
+      if (filteredLines.length > 0) {
+        elements.push({ type: "quote", content: filteredLines.join("\n") });
+      }
       continue;
     }
 
@@ -449,7 +459,16 @@ async function insertQuote(page: Page, text: string): Promise<void> {
     return;
   }
 
-  await page.keyboard.type(text);
+  // 複数行の引用に対応
+  const lines = text.split("\n");
+  for (let i = 0; i < lines.length; i++) {
+    await page.keyboard.type(lines[i]);
+    if (i < lines.length - 1) {
+      // 引用ブロック内での改行は Shift+Enter
+      await page.keyboard.press("Shift+Enter");
+    }
+  }
+  // 引用ブロックを終了
   await page.keyboard.press("Enter");
   await page.keyboard.press("Enter");
 }

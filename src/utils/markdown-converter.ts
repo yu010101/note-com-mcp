@@ -50,8 +50,8 @@ function isSpecialLine(line: string): boolean {
   if (/^[\-\*] /.test(trimmed)) return true;
   // 番号付きリスト
   if (/^\d+\. /.test(trimmed)) return true;
-  // 引用
-  if (/^> /.test(trimmed)) return true;
+  // 引用（スペースあり/なし両対応）
+  if (/^>/.test(trimmed)) return true;
   // 水平線
   if (/^-{3,}$/.test(trimmed) || /^\*{3,}$/.test(trimmed)) return true;
   // コードブロックプレースホルダー
@@ -228,8 +228,8 @@ export function convertMarkdownToHtml(markdown: string): string {
           continue;
         }
 
-        // 引用の処理
-        const quoteMatch = trimmedLine.match(/^> (.+)$/);
+        // 引用の処理（スペースあり/なし両対応）
+        const quoteMatch = trimmedLine.match(/^>\s?(.*)$/);
         if (quoteMatch) {
           if (inList) {
             result.push(
