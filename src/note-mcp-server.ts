@@ -465,12 +465,13 @@ async function noteApiRequest(
 ): Promise<NoteApiResponse> {
   const headers: { [key: string]: string } = {
     "Content-Type": "application/json",
+    Accept: "application/json",
     "User-Agent":
       "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/96.0.4664.110 Safari/537.36",
+    "X-Requested-With": "XMLHttpRequest",
+    Origin: "https://editor.note.com",
+    Referer: "https://editor.note.com/",
   };
-
-  // Acceptヘッダーを追加
-  headers["Accept"] = "application/json";
 
   // 認証設定 - 動的に取得したCookieを最優先
   if (localActiveSessionCookie) {
@@ -1476,6 +1477,379 @@ server.tool(
   }
 );
 
+// 7.5. 画像付き下書き作成ツール（API経由で画像を本文に挿入）
+server.tool(
+  "post-draft-note-with-images",
+  "画像付きの下書き記事を作成する（API経由で画像を本文に挿入）",
+  {
+    title: z.string().describe("記事のタイトル"),
+    body: z
+      .string()
+      .describe(
+        "記事の本文（Markdown形式、![[image.png]]形式の画像参照を含む）",
+      ),
+    images: z
+      .array(
+        z.object({
+          fileName: z.string().describe("ファイル名（例: image.png）"),
+          base64: z
+            .string()
+            .describe("Base64エンコードされた画像データ"),
+          mimeType: z
+            .string()
+            .optional()
+            .describe("MIMEタイプ（例: image/png）"),
+        }),
+      )
+      .optional()
+      .describe("Base64エンコードされた画像の配列"),
+    eyecatch: z
+      .object({
+        fileName: z.string().describe("ファイル名"),
+        base64: z.string().describe("Base64エンコードされた画像データ"),
+        mimeType: z.string().optional().describe("MIMEタイプ"),
+      })
+      .optional()
+      .describe("アイキャッチ画像"),
+    tags: z.array(z.string()).optional().describe("タグ（最大10個）"),
+    id: z
+      .string()
+      .optional()
+      .describe("既存の下書きID（既存の下書きを更新する場合）"),
+  },
+  async ({ title, body, images, eyecatch, tags, id }) => {
+    try {
+      if (!hasAuth()) {
+        return {
+          content: [
+            {
+              type: "text",
+              text: "認証情報がないため、投稿できません。.envファイルに認証情報を設定してください。",
+            },
+          ],
+          isError: true,
+        };
+      }
+
+      const uploadedImages = new Map<string, string>();
+
+      // 画像をアップロードしてURLを取得
+      const allImages = [...(images || [])];
+      if (eyecatch?.base64) {
+        allImages.push({
+          fileName: eyecatch.fileName,
+          base64: eyecatch.base64,
+          mimeType: eyecatch.mimeType,
+        });
+      }
+
+      if (allImages.length > 0) {
+        console.error(`${allImages.length}件の画像をアップロード中...`);
+
+        for (const img of allImages) {
+          try {
+            const imageBuffer = Buffer.from(img.base64, "base64");
+            const fileName = img.fileName;
+            const mimeType = img.mimeType || "image/png";
+
+            // Step 1: Presigned URLを取得
+            const boundary1 = `----WebKitFormBoundary${Math.random().toString(36).substring(2)}`;
+            const presignFormParts: Buffer[] = [];
+            presignFormParts.push(
+              Buffer.from(
+                `--${boundary1}\r\n` +
+                  `Content-Disposition: form-data; name="filename"\r\n\r\n` +
+                  `${fileName}\r\n`,
+              ),
+            );
+            presignFormParts.push(Buffer.from(`--${boundary1}--\r\n`));
+            const presignFormData = Buffer.concat(presignFormParts);
+
+            // Presigned URL取得は multipart/form-data のため fetch を直接使用
+            const presignHeaders: Record<string, string> = {
+              "Content-Type": `multipart/form-data; boundary=${boundary1}`,
+              "Content-Length": presignFormData.length.toString(),
+              Accept: "application/json",
+              "X-Requested-With": "XMLHttpRequest",
+              Origin: "https://editor.note.com",
+              Referer: "https://editor.note.com/",
+              "User-Agent":
+                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+            };
+            if (localActiveSessionCookie) {
+              presignHeaders["Cookie"] = localActiveSessionCookie;
+            } else if (NOTE_SESSION_V5) {
+              presignHeaders["Cookie"] =
+                `_note_session_v5=${NOTE_SESSION_V5}`;
+            }
+            // XSRFトークンを追加（note.com APIのPOSTリクエストに必要）
+            if (localActiveXsrfToken) {
+              presignHeaders["X-XSRF-TOKEN"] = localActiveXsrfToken;
+            } else if (NOTE_XSRF_TOKEN) {
+              presignHeaders["X-XSRF-TOKEN"] = NOTE_XSRF_TOKEN;
+            }
+
+            const presignRes = await fetch(
+              `${API_BASE_URL}/v3/images/upload/presigned_post`,
+              {
+                method: "POST",
+                headers: presignHeaders,
+                body: presignFormData,
+              },
+            );
+
+            if (!presignRes.ok) {
+              console.error(
+                `Presigned URL取得失敗: ${fileName} (${presignRes.status})`,
+              );
+              continue;
+            }
+
+            const presignData = (await presignRes.json()) as any;
+            if (!presignData.data?.post) {
+              console.error(`Presigned URLレスポンス不正: ${fileName}`);
+              continue;
+            }
+
+            const {
+              url: finalImageUrl,
+              action: s3Url,
+              post: s3Params,
+            } = presignData.data;
+
+            // Step 2: S3にアップロード
+            const boundary2 = `----WebKitFormBoundary${Math.random().toString(36).substring(2)}`;
+            const s3FormParts: Buffer[] = [];
+
+            const paramOrder = [
+              "key",
+              "acl",
+              "Expires",
+              "policy",
+              "x-amz-credential",
+              "x-amz-algorithm",
+              "x-amz-date",
+              "x-amz-signature",
+            ];
+            for (const key of paramOrder) {
+              if (s3Params[key]) {
+                s3FormParts.push(
+                  Buffer.from(
+                    `--${boundary2}\r\n` +
+                      `Content-Disposition: form-data; name="${key}"\r\n\r\n` +
+                      `${s3Params[key]}\r\n`,
+                  ),
+                );
+              }
+            }
+
+            s3FormParts.push(
+              Buffer.from(
+                `--${boundary2}\r\n` +
+                  `Content-Disposition: form-data; name="file"; filename="${fileName}"\r\n` +
+                  `Content-Type: ${mimeType}\r\n\r\n`,
+              ),
+            );
+            s3FormParts.push(imageBuffer);
+            s3FormParts.push(Buffer.from("\r\n"));
+            s3FormParts.push(Buffer.from(`--${boundary2}--\r\n`));
+
+            const s3FormData = Buffer.concat(s3FormParts);
+
+            const s3Response = await fetch(s3Url, {
+              method: "POST",
+              headers: {
+                "Content-Type": `multipart/form-data; boundary=${boundary2}`,
+                "Content-Length": s3FormData.length.toString(),
+              },
+              body: s3FormData,
+            });
+
+            if (!s3Response.ok && s3Response.status !== 204) {
+              console.error(
+                `S3アップロード失敗: ${fileName} (${s3Response.status})`,
+              );
+              continue;
+            }
+
+            uploadedImages.set(fileName, finalImageUrl);
+            console.error(
+              `画像アップロード成功: ${fileName} -> ${finalImageUrl}`,
+            );
+          } catch (e: any) {
+            console.error(
+              `画像アップロードエラー: ${img.fileName}`,
+              e.message,
+            );
+          }
+        }
+      }
+
+      // 本文内の画像参照をアップロードしたURLに置換
+      let processedBody = body;
+
+      // ai-summaryタグブロックを処理
+      processedBody = processedBody.replace(
+        /<!--\s*ai-summary:start[^>]*-->\n(!\[\[([^\]|]+)(?:\|[^\]]+)?\]\])\n\*([^*]+)\*\n<!--\s*ai-summary:end[^>]*-->/g,
+        (match, _imgTag, fileName, caption) => {
+          const baseName = path.basename(fileName.trim());
+          if (uploadedImages.has(baseName)) {
+            const imageUrl = uploadedImages.get(baseName)!;
+            const uuid1 = randomUUID();
+            const uuid2 = randomUUID();
+            return `<figure name="${uuid1}" id="${uuid2}"><img src="${imageUrl}" alt="" width="620" height="auto"><figcaption>${caption.trim()}</figcaption></figure>`;
+          }
+          return match;
+        },
+      );
+
+      // Obsidian形式の画像参照を置換: ![[filename.png]] or ![[filename.png|caption]]
+      processedBody = processedBody.replace(
+        /!\[\[([^\]|]+)(?:\|([^\]]+))?\]\]/g,
+        (match, fileName, caption) => {
+          const baseName = path.basename(fileName.trim());
+          if (uploadedImages.has(baseName)) {
+            const imageUrl = uploadedImages.get(baseName)!;
+            const uuid1 = randomUUID();
+            const uuid2 = randomUUID();
+            return `<figure name="${uuid1}" id="${uuid2}"><img src="${imageUrl}" alt="" width="620" height="auto"><figcaption>${caption || ""}</figcaption></figure>`;
+          }
+          return match;
+        },
+      );
+
+      // 標準Markdown形式の画像参照を置換: ![alt](path)
+      processedBody = processedBody.replace(
+        /!\[([^\]]*)\]\(([^)]+)\)/g,
+        (match, alt, srcPath) => {
+          if (srcPath.startsWith("http")) return match;
+          const baseName = path.basename(srcPath);
+          if (uploadedImages.has(baseName)) {
+            const imageUrl = uploadedImages.get(baseName)!;
+            const uuid1 = randomUUID();
+            const uuid2 = randomUUID();
+            return `<figure name="${uuid1}" id="${uuid2}"><img src="${imageUrl}" alt="" width="620" height="auto"><figcaption>${alt || ""}</figcaption></figure>`;
+          }
+          return match;
+        },
+      );
+
+      // 新規作成の場合、まず空の下書きを作成
+      let noteId = id;
+      if (!noteId) {
+        console.error("新規下書きを作成します...");
+
+        const createData = {
+          body: "<p></p>",
+          body_length: 0,
+          name: title || "無題",
+          index: false,
+          is_lead_form: false,
+        };
+
+        const createResult = await noteApiRequest(
+          "/v1/text_notes",
+          "POST",
+          createData,
+          true,
+        );
+
+        if (createResult.data?.id) {
+          noteId = createResult.data.id.toString();
+          console.error(
+            `下書き作成成功: ID=${noteId}, key=${createResult.data.key || `n${noteId}`}`,
+          );
+        } else {
+          throw new Error("下書きの作成に失敗しました");
+        }
+      }
+
+      // Markdown→HTML変換（figureタグを退避→復元）
+      const figurePattern = /<figure[^>]*>[\s\S]*?<\/figure>/g;
+      const figures: string[] = [];
+      const bodyForConversion = processedBody.replace(
+        figurePattern,
+        (match: string) => {
+          figures.push(match);
+          return `__FIGURE_PLACEHOLDER_${figures.length - 1}__`;
+        },
+      );
+
+      let htmlBody = convertMarkdownToNoteHtml(bodyForConversion);
+
+      figures.forEach((figure, index) => {
+        htmlBody = htmlBody.replace(
+          `__FIGURE_PLACEHOLDER_${index}__`,
+          figure,
+        );
+        htmlBody = htmlBody.replace(
+          `<p>__FIGURE_PLACEHOLDER_${index}__</p>`,
+          figure,
+        );
+      });
+
+      // 下書きを更新
+      const updateData = {
+        body: htmlBody || "",
+        body_length: (htmlBody || "").length,
+        name: title || "無題",
+        index: false,
+        is_lead_form: false,
+      };
+
+      const data = await noteApiRequest(
+        `/v1/text_notes/draft_save?id=${noteId}&is_temp_saved=true`,
+        "POST",
+        updateData,
+        true,
+      );
+
+      const noteKey = `n${noteId}`;
+      return {
+        content: [
+          {
+            type: "text",
+            text: JSON.stringify(
+              {
+                success: true,
+                message: "画像付き記事を下書き保存しました",
+                noteId: noteId,
+                noteKey: noteKey,
+                editUrl: `https://editor.note.com/notes/${noteKey}/edit/`,
+                uploadedImages: Array.from(uploadedImages.entries()).map(
+                  ([name, url]) => ({ name, url }),
+                ),
+                imageCount: uploadedImages.size,
+                data: data,
+              },
+              null,
+              2,
+            ),
+          },
+        ],
+      };
+    } catch (error) {
+      console.error(`画像付き下書き保存処理でエラー: ${error}`);
+      return {
+        content: [
+          {
+            type: "text",
+            text: JSON.stringify(
+              {
+                success: false,
+                error: `画像付き記事の投稿に失敗しました: ${error}`,
+              },
+              null,
+              2,
+            ),
+          },
+        ],
+        isError: true,
+      };
+    }
+  },
+);
+
 // 8. コメント投稿ツール
 server.tool(
   "post-comment",
@@ -2194,6 +2568,27 @@ async function main() {
         }
 
         if (req.method === "POST") {
+          // レガシークライアント互換: Acceptヘッダーがない場合は自動補完
+          // @hono/node-server は req.rawHeaders（生配列）を直接読むため両方更新が必要
+          const accept = req.headers["accept"] || "";
+          if (
+            !accept.includes("text/event-stream") ||
+            !accept.includes("application/json")
+          ) {
+            const correctAccept =
+              "application/json, text/event-stream";
+            req.headers["accept"] = correctAccept;
+            // rawHeaders から既存の Accept を除去し、正しい値を追加
+            const newRawHeaders: string[] = [];
+            for (let i = 0; i < req.rawHeaders.length; i += 2) {
+              if (req.rawHeaders[i].toLowerCase() !== "accept") {
+                newRawHeaders.push(req.rawHeaders[i], req.rawHeaders[i + 1]);
+              }
+            }
+            newRawHeaders.push("Accept", correctAccept);
+            (req as any).rawHeaders = newRawHeaders;
+          }
+
           const body = await new Promise<string>((resolve) => {
             let data = "";
             req.on("data", (chunk: Buffer) => {
@@ -2239,6 +2634,102 @@ async function main() {
               };
               await server.connect(transport);
               await transport.handleRequest(req, res, parsedBody);
+            } else if (!sessionId) {
+              // セッションなしの直接リクエスト（レガシークライアント互換）
+              // ステートレスなワンショットトランスポートで処理
+              const transport = new StreamableHTTPServerTransport({
+                sessionIdGenerator: undefined,
+              });
+              res.on("close", () => {
+                transport.close();
+              });
+
+              // レガシークライアント向け: SSEレスポンスをプレーンJSONに変換
+              // StreamableHTTPServerTransport は text/event-stream で返すが、
+              // Obsidian等のレガシークライアントは application/json を期待する
+              const responseChunks: Buffer[] = [];
+              const origWriteHead = res.writeHead.bind(res);
+              const origWrite = res.write.bind(res) as (
+                ...args: unknown[]
+              ) => boolean;
+              const origEnd = res.end.bind(res) as (
+                ...args: unknown[]
+              ) => http.ServerResponse;
+              const origFlushHeaders = res.flushHeaders.bind(res);
+              let intercepting = false;
+              let capturedStatusCode = 200;
+
+              (res as any).writeHead = (
+                statusCode: number,
+                headers?: Record<string, string>,
+              ): http.ServerResponse => {
+                capturedStatusCode = statusCode;
+                const h = headers || {};
+                const contentType =
+                  h["Content-Type"] || h["content-type"] || "";
+                if (contentType === "text/event-stream") {
+                  intercepting = true;
+                  return res;
+                }
+                return origWriteHead(statusCode, h);
+              };
+
+              (res as any).flushHeaders = () => {
+                if (intercepting) return;
+                origFlushHeaders();
+              };
+
+              (res as any).write = (
+                chunk: unknown,
+                ...args: unknown[]
+              ): boolean => {
+                if (intercepting) {
+                  responseChunks.push(
+                    Buffer.isBuffer(chunk)
+                      ? chunk
+                      : chunk instanceof Uint8Array
+                        ? Buffer.from(chunk)
+                        : Buffer.from(String(chunk)),
+                  );
+                  return true;
+                }
+                return origWrite(chunk, ...args);
+              };
+
+              (res as any).end = (
+                chunk?: unknown,
+                ...args: unknown[]
+              ): http.ServerResponse => {
+                if (intercepting) {
+                  if (chunk) {
+                    responseChunks.push(
+                      Buffer.isBuffer(chunk)
+                        ? chunk
+                        : Buffer.from(String(chunk)),
+                    );
+                  }
+                  const body = Buffer.concat(responseChunks).toString("utf-8");
+                  const dataLines = body
+                    .split("\n")
+                    .filter((line) => line.startsWith("data: "))
+                    .map((line) => line.slice(6));
+                  if (dataLines.length > 0) {
+                    const jsonResponse = dataLines.join("");
+                    origWriteHead(capturedStatusCode, {
+                      "Content-Type": "application/json",
+                    });
+                    return origEnd(jsonResponse);
+                  }
+                  origWriteHead(capturedStatusCode, {
+                    "Content-Type": "application/json",
+                  });
+                  return origEnd(body);
+                }
+                return origEnd(chunk, ...args);
+              };
+
+              await server.connect(transport);
+              await transport.handleRequest(req, res, parsedBody);
             } else {
               res.writeHead(400, { "Content-Type": "application/json" });
               res.end(
@@ -2246,7 +2737,7 @@ async function main() {
                   jsonrpc: "2.0",
                   error: {
                     code: -32000,
-                    message: "Bad Request: No valid session ID",
+                    message: "Bad Request: Invalid session ID",
                   },
                   id: null,
                 }),
