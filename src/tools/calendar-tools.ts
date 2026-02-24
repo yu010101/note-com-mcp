@@ -2,25 +2,9 @@ import { z } from "zod";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { noteApiRequest } from "../utils/api-client.js";
 import { createSuccessResponse, handleApiError } from "../utils/error-handler.js";
-import { env } from "../config/environment.js";
 import { fetchAllStats } from "../utils/analytics-helpers.js";
-import { ContentPlanEntry, EditorialVoice } from "../types/analytics-types.js";
-import fs from "fs";
-import path from "path";
-import { fileURLToPath } from "url";
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
-function readEditorialVoice(): EditorialVoice | null {
-  const voicePath = path.resolve(__dirname, "../../editorial-voice.json");
-  if (!fs.existsSync(voicePath)) return null;
-  try {
-    return JSON.parse(fs.readFileSync(voicePath, "utf-8")) as EditorialVoice;
-  } catch {
-    return null;
-  }
-}
+import { ContentPlanEntry } from "../types/analytics-types.js";
+import { readEditorialVoiceOrNull } from "../utils/voice-reader.js";
 
 export function registerCalendarTools(server: McpServer) {
   server.tool(
@@ -45,7 +29,7 @@ export function registerCalendarTools(server: McpServer) {
         ]);
 
         // editorial-voice読み込み
-        const voice = readEditorialVoice();
+        const voice = readEditorialVoiceOrNull();
 
         // トレンドハッシュタグ
         const trendHashtags: string[] = [];

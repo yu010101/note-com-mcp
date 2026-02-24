@@ -27,6 +27,8 @@ import { registerVoiceTools } from "./tools/voice-tools.js";
 import { registerCompetitorTools } from "./tools/competitor-tools.js";
 import { registerCalendarTools } from "./tools/calendar-tools.js";
 import { registerWorkflowTools } from "./tools/workflow-tools.js";
+import { registerMemoryTools } from "./tools/memory-tools.js";
+import { registerPdcaTools } from "./tools/pdca-tools.js";
 
 // ESMでの__dirnameの代替
 const __filename = fileURLToPath(import.meta.url);
@@ -3974,6 +3976,8 @@ registerVoiceTools(server);
 registerCompetitorTools(server);
 registerCalendarTools(server);
 registerWorkflowTools(server);
+registerMemoryTools(server);
+registerPdcaTools(server);
 
 main().catch((error) => {
   console.error("Fatal error:", error);

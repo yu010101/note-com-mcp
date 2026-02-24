@@ -29,6 +29,7 @@ export interface PDCAReport {
 }
 
 export interface EditorialVoice {
+  // 基本7フィールド
   writingStyle: string;
   targetAudience: string;
   brandVoice: string;
@@ -36,6 +37,28 @@ export interface EditorialVoice {
   avoidTopics: string[];
   toneKeywords: string[];
   examplePhrases: string[];
+  // soul拡張（optional — 後方互換）
+  personality?: {
+    traits: string[];
+    speakingStyle: string[];
+    favorites: string[];
+    dislikes: string[];
+  };
+  expertise?: {
+    field: string;
+    level: "beginner" | "intermediate" | "advanced" | "expert";
+    keywords: string[];
+  }[];
+  values?: {
+    coreBeliefs: string[];
+    prohibitions: string[];
+    guidelines: string;
+  };
+  styleGuide?: {
+    punctuation: string;
+    honorifics: string;
+    narrative: string;
+  };
 }
 
 export interface CompetitorReport {
@@ -60,4 +83,32 @@ export interface WorkflowStepResult {
   status: "success" | "skipped" | "error";
   data?: any;
   error?: string;
+}
+
+export interface MemoryEntry {
+  id: string;
+  timestamp: string;
+  type: "observation" | "insight" | "decision" | "reflection";
+  content: string;
+  source: string;
+  tags: string[];
+  metadata?: Record<string, unknown>;
+}
+
+export interface PDCACycleEntry {
+  cycleId: string;
+  startDate: string;
+  endDate: string;
+  period: "week" | "month";
+  plan: string[];
+  doActions: string[];
+  checkResult: {
+    totalPV: number;
+    averagePV: number;
+    risingCount: number;
+    decliningCount: number;
+    topArticles: { title: string; pv: number }[];
+  };
+  actItems: string[];
+  completedAt: string;
 }

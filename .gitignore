@@ -79,6 +79,10 @@ XSERVER_DEPLOY.md
 # 編集方針設定（ユーザー固有）
 editorial-voice.json
 
+# 記憶・PDCA履歴データ（セッション固有）
+memory-data.json
+pdca-history.json
+
 # テストファイル
 linebreak-test.md
 markdown-test-sample.md

@@ -5,24 +5,9 @@ import { formatNote } from "../utils/formatters.js";
 import { createSuccessResponse, handleApiError } from "../utils/error-handler.js";
 import { env } from "../config/environment.js";
 import { fetchAllStats, computeTrends, categorizeArticles } from "../utils/analytics-helpers.js";
-import { WorkflowStepResult, EditorialVoice } from "../types/analytics-types.js";
-import fs from "fs";
-import path from "path";
-import { fileURLToPath } from "url";
+import { WorkflowStepResult } from "../types/analytics-types.js";
+import { readEditorialVoiceOrNull } from "../utils/voice-reader.js";
 import fetch from "node-fetch";
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
-function readEditorialVoice(): EditorialVoice | null {
-  const voicePath = path.resolve(__dirname, "../../editorial-voice.json");
-  if (!fs.existsSync(voicePath)) return null;
-  try {
-    return JSON.parse(fs.readFileSync(voicePath, "utf-8")) as EditorialVoice;
-  } catch {
-    return null;
-  }
-}
 
 async function sendWebhook(title: string, body: string): Promise<boolean> {
   if (!env.WEBHOOK_URL) return false;
@@ -201,7 +186,7 @@ export function registerWorkflowTools(server: McpServer) {
             }
 
             // Step 3: editorial-voice準拠チェック
-            const voice = readEditorialVoice();
+            const voice = readEditorialVoiceOrNull();
             if (voice) {
               steps.push({
                 step: "編集方針チェック",
@@ -346,7 +331,7 @@ export function registerWorkflowTools(server: McpServer) {
                 });
 
                 // Step 3: カレンダー生成
-                const voice = readEditorialVoice();
+                const voice = readEditorialVoiceOrNull();
                 const focusTopics = voice?.topicFocus || [];
 
                 steps.push({

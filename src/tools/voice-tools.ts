@@ -2,45 +2,7 @@ import { z } from "zod";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { createSuccessResponse, createErrorResponse } from "../utils/error-handler.js";
 import { EditorialVoice } from "../types/analytics-types.js";
-import fs from "fs";
-import path from "path";
-import { fileURLToPath } from "url";
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
-function getVoicePath(): string {
-  // プロジェクトルートの editorial-voice.json を参照
-  // src/tools/ → src/ → project root
-  return path.resolve(__dirname, "../../editorial-voice.json");
-}
-
-function readEditorialVoice(): EditorialVoice {
-  const voicePath = getVoicePath();
-  if (!fs.existsSync(voicePath)) {
-    // デフォルト値を返す
-    return {
-      writingStyle: "丁寧だが親しみやすい",
-      targetAudience: "20-40代のビジネスパーソン",
-      brandVoice: "実践的で具体的",
-      topicFocus: ["AI活用", "自動化", "生産性"],
-      avoidTopics: [],
-      toneKeywords: ["わかりやすい", "実践的", "前向き"],
-      examplePhrases: ["具体的に言うと、", "実際にやってみると、"],
-    };
-  }
-  const raw = fs.readFileSync(voicePath, "utf-8");
-  return JSON.parse(raw) as EditorialVoice;
-}
-
-function writeEditorialVoice(voice: EditorialVoice): void {
-  const voicePath = getVoicePath();
-  const dir = path.dirname(voicePath);
-  if (!fs.existsSync(dir)) {
-    fs.mkdirSync(dir, { recursive: true });
-  }
-  fs.writeFileSync(voicePath, JSON.stringify(voice, null, 2) + "\n", "utf-8");
-}
+import { readEditorialVoice, writeEditorialVoice } from "../utils/voice-reader.js";
 
 export function registerVoiceTools(server: McpServer) {
   server.tool(
@@ -69,12 +31,34 @@ export function registerVoiceTools(server: McpServer) {
       avoidTopics: z.array(z.string()).optional().describe("避けるトピック一覧"),
       toneKeywords: z.array(z.string()).optional().describe("トーンを表すキーワード"),
       examplePhrases: z.array(z.string()).optional().describe("例文フレーズ"),
+      // soul拡張フィールド
+      personality: z.object({
+        traits: z.array(z.string()),
+        speakingStyle: z.array(z.string()),
+        favorites: z.array(z.string()),
+        dislikes: z.array(z.string()),
+      }).optional().describe("パーソナリティ設定"),
+      expertise: z.array(z.object({
+        field: z.string(),
+        level: z.enum(["beginner", "intermediate", "advanced", "expert"]),
+        keywords: z.array(z.string()),
+      })).optional().describe("専門分野設定"),
+      values: z.object({
+        coreBeliefs: z.array(z.string()),
+        prohibitions: z.array(z.string()),
+        guidelines: z.string(),
+      }).optional().describe("価値観・禁則事項"),
+      styleGuide: z.object({
+        punctuation: z.string(),
+        honorifics: z.string(),
+        narrative: z.string(),
+      }).optional().describe("文体ガイド"),
     },
     async (updates) => {
       try {
         const current = readEditorialVoice();
 
-        // 指定されたフィールドのみ上書き
+        // 指定されたフィールドのみ上書き（soul拡張含む）
         const updated: EditorialVoice = {
           writingStyle: updates.writingStyle ?? current.writingStyle,
           targetAudience: updates.targetAudience ?? current.targetAudience,
@@ -83,6 +67,10 @@ export function registerVoiceTools(server: McpServer) {
           avoidTopics: updates.avoidTopics ?? current.avoidTopics,
           toneKeywords: updates.toneKeywords ?? current.toneKeywords,
           examplePhrases: updates.examplePhrases ?? current.examplePhrases,
+          personality: updates.personality ?? current.personality,
+          expertise: updates.expertise ?? current.expertise,
+          values: updates.values ?? current.values,
+          styleGuide: updates.styleGuide ?? current.styleGuide,
         };
 
         writeEditorialVoice(updated);

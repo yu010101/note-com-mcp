@@ -157,4 +157,31 @@ export function registerPrompts(server: McpServer): void {
       ],
     })
   );
+
+  // 自律振り返りプロンプト
+  server.prompt(
+    "autonomous-reflection",
+    {},
+    () => ({
+      messages: [
+        {
+          role: "user",
+          content: {
+            type: "text",
+            text: `noteアカウントの自律振り返りを実行してください。
+
+以下の手順で進めてください：
+1. get-memoriesで過去の記憶を確認（直近20件）
+2. analyze-content-performanceで現在のパフォーマンスを分析
+3. compare-pdca-cyclesで前回との比較を確認
+4. get-editorial-voiceで編集方針を確認
+5. 以上を踏まえて、record-memoryで新しい洞察を記録
+6. 次のアクションを3つ提案
+
+過去の記憶・パフォーマンスデータ・PDCA履歴を総合的に判断し、具体的な改善提案をしてください。`,
+          },
+        },
+      ],
+    })
+  );
 }

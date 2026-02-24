@@ -14,6 +14,8 @@ import { registerVoiceTools } from "./voice-tools.js";
 import { registerCompetitorTools } from "./competitor-tools.js";
 import { registerCalendarTools } from "./calendar-tools.js";
 import { registerWorkflowTools } from "./workflow-tools.js";
+import { registerMemoryTools } from "./memory-tools.js";
+import { registerPdcaTools } from "./pdca-tools.js";
 
 /**
  * すべてのツールをMCPサーバーに登録する
@@ -38,4 +40,8 @@ export function registerAllTools(server: McpServer): void {
   registerCompetitorTools(server);
   registerCalendarTools(server);
   registerWorkflowTools(server);
+
+  // 記憶・PDCAサイクル
+  registerMemoryTools(server);
+  registerPdcaTools(server);
 }
