@@ -137,6 +137,41 @@ node build/note-mcp-server.js --http
 - `get-membership-notes` - メンバーシップの記事一覧
 - `get-circle-info` - サークル情報
 
+### 自律エージェント機能（認証必須）
+
+Claude Codeやn8nから「朝のルーティン」「週次レビュー」のように定型業務を自動実行するためのツール群です。
+
+- `analyze-content-performance` - コンテンツパフォーマンスをPDCA形式で分析（週間/月間/全期間のPVトレンド判定）
+- `send-report` - レポートをWebhook経由で外部サービスに送信（Slack / Discord / Telegram / 汎用）
+- `get-editorial-voice` - 編集方針（ブランドボイス・ターゲット・トーン等）を取得
+- `update-editorial-voice` - 編集方針を部分更新
+- `monitor-competitors` - 競合クリエイターの投稿頻度・エンゲージメント・ハッシュタグを分析し、ギャップを特定
+- `generate-content-plan` - PVデータとトレンドハッシュタグに基づく投稿カレンダーを自動生成
+- `run-content-workflow` - 定型ワークフローを実行（`morning-check` / `draft-review` / `performance-report` / `content-planning` / `publish-readiness`）
+
+#### 通知設定（任意）
+
+`.env`に以下を追加すると、レポートを外部サービスに自動送信できます：
+
+```env
+# Slack
+WEBHOOK_URL=https://hooks.slack.com/services/xxx
+WEBHOOK_FORMAT=slack
+
+# Discord
+WEBHOOK_URL=https://discord.com/api/webhooks/xxx
+WEBHOOK_FORMAT=discord
+
+# Telegram
+TELEGRAM_BOT_TOKEN=bot123:xxx
+TELEGRAM_CHAT_ID=123456
+WEBHOOK_FORMAT=telegram
+```
+
+#### 編集方針（editorial-voice.json）
+
+プロジェクトルートに`editorial-voice.json`を作成すると、下書きレビューやカレンダー生成時の品質基準として使用されます。`get-editorial-voice` / `update-editorial-voice`ツールで管理できます。
+
 ## 🔧 設定方法
 
 ### Claude Desktop

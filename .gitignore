@@ -76,6 +76,9 @@ business-plan-draft.md
 # 特定環境向けデプロイガイド
 XSERVER_DEPLOY.md
 
+# 編集方針設定（ユーザー固有）
+editorial-voice.json
+
 # テストファイル
 linebreak-test.md
 markdown-test-sample.md

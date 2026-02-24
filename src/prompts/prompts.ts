@@ -102,6 +102,42 @@ export function registerPrompts(server: McpServer): void {
     })
   );
 
+  // PDCAレビュープロンプト
+  server.prompt(
+    "pdca-review",
+    {
+      period: z.enum(["week", "month"]).describe("レビュー期間"),
+    },
+    ({ period }) => ({
+      messages: [
+        {
+          role: "user",
+          content: {
+            type: "text",
+            text: `noteアカウントの${period === "week" ? "週次" : "月次"}PDCAレビューを実施してください。\n\n以下の手順で進めてください：\n1. analyze-content-performanceで${period}のパフォーマンスデータを取得\n2. get-editorial-voiceで編集方針を確認\n3. データに基づいてPlan/Do/Check/Actの各項目を具体的に提案\n4. 次の${period === "week" ? "1週間" : "1ヶ月"}のアクションアイテムを3-5つ提示\n\n数値データに基づいた具体的な改善提案をお願いします。`,
+          },
+        },
+      ],
+    })
+  );
+
+  // 朝のルーティンプロンプト
+  server.prompt(
+    "morning-routine",
+    {},
+    () => ({
+      messages: [
+        {
+          role: "user",
+          content: {
+            type: "text",
+            text: `noteアカウントの朝のルーティンチェックを実行してください。\n\n以下を順番に実施してください：\n1. run-content-workflowでmorning-checkを実行し、PV統計と通知を確認\n2. 下書きがあれば、完成度の高いものを報告\n3. 今日の投稿推奨アクションを提案\n4. 重要な数値の変化があればハイライト\n\n簡潔なダッシュボード形式で結果をまとめてください。`,
+          },
+        },
+      ],
+    })
+  );
+
   // コンテンツカレンダープロンプト
   server.prompt(
     "content-calendar",

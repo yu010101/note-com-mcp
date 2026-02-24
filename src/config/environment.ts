@@ -21,6 +21,10 @@ export interface Environment {
   MCP_HTTP_PORT?: string;
   MCP_HTTP_HOST?: string;
   NOTION_TOKEN: string;
+  WEBHOOK_URL: string;
+  WEBHOOK_FORMAT: string;
+  TELEGRAM_BOT_TOKEN: string;
+  TELEGRAM_CHAT_ID: string;
 }
 
 export const env: Environment = {
@@ -34,6 +38,10 @@ export const env: Environment = {
   MCP_HTTP_PORT: process.env.MCP_HTTP_PORT || "3000",
   MCP_HTTP_HOST: process.env.MCP_HTTP_HOST || "127.0.0.1",
   NOTION_TOKEN: process.env.NOTION_TOKEN || "",
+  WEBHOOK_URL: process.env.WEBHOOK_URL || "",
+  WEBHOOK_FORMAT: process.env.WEBHOOK_FORMAT || "generic",
+  TELEGRAM_BOT_TOKEN: process.env.TELEGRAM_BOT_TOKEN || "",
+  TELEGRAM_CHAT_ID: process.env.TELEGRAM_CHAT_ID || "",
 };
 
 // 認証状態の判定

@@ -20,6 +20,14 @@ import {
 // Markdown converter utility
 import { convertMarkdownToNoteHtml } from "./utils/markdown-converter.js";
 
+// 自律エージェント機能（モジュラーツール）
+import { registerAnalyticsTools } from "./tools/analytics-tools.js";
+import { registerNotificationTools } from "./tools/notification-tools.js";
+import { registerVoiceTools } from "./tools/voice-tools.js";
+import { registerCompetitorTools } from "./tools/competitor-tools.js";
+import { registerCalendarTools } from "./tools/calendar-tools.js";
+import { registerWorkflowTools } from "./tools/workflow-tools.js";
+
 // ESMでの__dirnameの代替
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -3958,6 +3966,14 @@ server.tool(
     }
   }
 );
+
+// === 自律エージェント機能の登録 ===
+registerAnalyticsTools(server);
+registerNotificationTools(server);
+registerVoiceTools(server);
+registerCompetitorTools(server);
+registerCalendarTools(server);
+registerWorkflowTools(server);
 
 main().catch((error) => {
   console.error("Fatal error:", error);
