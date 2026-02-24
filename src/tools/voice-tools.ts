@@ -35,6 +35,10 @@ function readEditorialVoice(): EditorialVoice {
 
 function writeEditorialVoice(voice: EditorialVoice): void {
   const voicePath = getVoicePath();
+  const dir = path.dirname(voicePath);
+  if (!fs.existsSync(dir)) {
+    fs.mkdirSync(dir, { recursive: true });
+  }
   fs.writeFileSync(voicePath, JSON.stringify(voice, null, 2) + "\n", "utf-8");
 }
 

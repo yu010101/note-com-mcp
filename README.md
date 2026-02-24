@@ -24,6 +24,10 @@ npm run build
 cp .env.sample .env
 ```
 
+```bash
+cp editorial-voice.example.json editorial-voice.json  # 編集方針設定（任意）
+```
+
 `.env` を編集：
 
 ```env

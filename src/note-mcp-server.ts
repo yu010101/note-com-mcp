@@ -83,7 +83,7 @@ if (DEBUG) {
 // MCP サーバーインスタンスを作成
 const server = new McpServer({
   name: "note-api",
-  version: "1.0.0",
+  version: "2.1.0",
 });
 
 // 各種データ型の定義

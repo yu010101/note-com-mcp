@@ -1,5 +1,4 @@
 import { noteApiRequest } from "./api-client.js";
-import { formatNote } from "./formatters.js";
 import { env } from "../config/environment.js";
 import { TrendData } from "../types/analytics-types.js";
 
@@ -22,8 +21,23 @@ export async function fetchAllStats(
         true
       );
 
-      const notes = data?.data?.note_stats || data?.data?.noteStats || [];
-      if (!Array.isArray(notes) || notes.length === 0) break;
+      // APIレスポンス構造を探索（note.com APIはバージョンで異なる場合がある）
+      const responseData = data?.data || {};
+      const notes =
+        responseData.note_stats ||
+        responseData.noteStats ||
+        responseData.stats ||
+        responseData.notes ||
+        responseData.contents ||
+        (Array.isArray(responseData) ? responseData : []);
+      if (!Array.isArray(notes) || notes.length === 0) {
+        if (env.DEBUG && page === 1) {
+          console.error(
+            `fetchAllStats: 未知のレスポンス構造 keys=${Object.keys(responseData).join(",")}`
+          );
+        }
+        break;
+      }
 
       for (const stat of notes) {
         results.push({
