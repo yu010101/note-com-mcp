@@ -124,3 +124,12 @@ export interface ScheduleEntry {
   lastRun?: string;
   createdAt: string;
 }
+
+export interface PromotionEntry {
+  platform: "twitter" | "threads" | "generic";
+  text: string;
+  hashtags: string[];
+  url: string;
+  articleTitle: string;
+  generatedAt: string;
+}

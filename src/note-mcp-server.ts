@@ -32,6 +32,8 @@ import { registerPdcaTools } from "./tools/pdca-tools.js";
 import { registerAutonomousTools } from "./tools/autonomous-tools.js";
 import { registerScheduleTools } from "./tools/schedule-tools.js";
 import { registerFeedbackTools } from "./tools/feedback-tools.js";
+import { registerPromotionTools } from "./tools/promotion-tools.js";
+import { registerRevenueTools } from "./tools/revenue-tools.js";
 
 // ESMでの__dirnameの代替
 const __filename = fileURLToPath(import.meta.url);
@@ -3984,6 +3986,8 @@ registerPdcaTools(server);
 registerAutonomousTools(server);
 registerScheduleTools(server);
 registerFeedbackTools(server);
+registerPromotionTools(server);
+registerRevenueTools(server);
 
 main().catch((error) => {
   console.error("Fatal error:", error);

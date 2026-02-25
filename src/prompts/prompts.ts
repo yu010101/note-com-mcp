@@ -235,4 +235,30 @@ export function registerPrompts(server: McpServer): void {
       ],
     })
   );
+
+  // マネタイズレビュープロンプト
+  server.prompt(
+    "monetization-review",
+    {},
+    () => ({
+      messages: [
+        {
+          role: "user",
+          content: {
+            type: "text",
+            text: `noteアカウントのマネタイズレビューを実行してください。
+
+以下の手順で進めてください：
+1. analyze-revenueで有料/無料記事のパフォーマンスを比較
+2. suggest-promotion-strategyで宣伝すべき記事と戦略を確認
+3. 有望な記事に対してgenerate-promotionでTwitter宣伝テキストを生成
+4. 収益改善のための具体的なアクションプランを3-5項目提案
+5. 結果をrecord-memoryで記録
+
+データに基づいた実践的なマネタイズ改善提案をお願いします。`,
+          },
+        },
+      ],
+    })
+  );
 }

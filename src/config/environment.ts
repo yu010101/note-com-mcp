@@ -25,6 +25,13 @@ export interface Environment {
   WEBHOOK_FORMAT: string;
   TELEGRAM_BOT_TOKEN: string;
   TELEGRAM_CHAT_ID: string;
+  // Twitter API v2
+  TWITTER_API_KEY: string;
+  TWITTER_API_SECRET: string;
+  TWITTER_ACCESS_TOKEN: string;
+  TWITTER_ACCESS_SECRET: string;
+  // SNS Webhook（Twitter以外のSNS中継用）
+  SNS_WEBHOOK_URL: string;
 }
 
 export const env: Environment = {
@@ -42,6 +49,11 @@ export const env: Environment = {
   WEBHOOK_FORMAT: process.env.WEBHOOK_FORMAT || "generic",
   TELEGRAM_BOT_TOKEN: process.env.TELEGRAM_BOT_TOKEN || "",
   TELEGRAM_CHAT_ID: process.env.TELEGRAM_CHAT_ID || "",
+  TWITTER_API_KEY: process.env.TWITTER_API_KEY || "",
+  TWITTER_API_SECRET: process.env.TWITTER_API_SECRET || "",
+  TWITTER_ACCESS_TOKEN: process.env.TWITTER_ACCESS_TOKEN || "",
+  TWITTER_ACCESS_SECRET: process.env.TWITTER_ACCESS_SECRET || "",
+  SNS_WEBHOOK_URL: process.env.SNS_WEBHOOK_URL || "",
 };
 
 // 認証状態の判定

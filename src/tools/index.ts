@@ -19,6 +19,8 @@ import { registerPdcaTools } from "./pdca-tools.js";
 import { registerAutonomousTools } from "./autonomous-tools.js";
 import { registerScheduleTools } from "./schedule-tools.js";
 import { registerFeedbackTools } from "./feedback-tools.js";
+import { registerPromotionTools } from "./promotion-tools.js";
+import { registerRevenueTools } from "./revenue-tools.js";
 
 /**
  * すべてのツールをMCPサーバーに登録する
@@ -52,4 +54,8 @@ export function registerAllTools(server: McpServer): void {
   registerAutonomousTools(server);
   registerScheduleTools(server);
   registerFeedbackTools(server);
+
+  // SNSクロスポスト・マネタイズ
+  registerPromotionTools(server);
+  registerRevenueTools(server);
 }
