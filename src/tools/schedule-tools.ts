@@ -4,6 +4,12 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { createSuccessResponse, createErrorResponse } from "../utils/error-handler.js";
 import { readJsonStore, writeJsonStore } from "../utils/memory-store.js";
 import { ScheduleEntry } from "../types/analytics-types.js";
+import {
+  startAllSchedules,
+  stopAllSchedules,
+  reloadSchedules,
+  getSchedulerStatus,
+} from "../utils/scheduler.js";
 
 const SCHEDULE_FILE = "schedule-config.json";
 
@@ -11,7 +17,7 @@ export function registerScheduleTools(server: McpServer) {
   // --- manage-schedule ---
   server.tool(
     "manage-schedule",
-    "自動実行スケジュールを管理する。追加・更新・削除・有効/無効切り替えが可能。実際のcron実行はn8n等の外部スケジューラに委譲する。",
+    "自動実行スケジュールを管理する。追加・更新・削除・有効/無効切り替えが可能。変更後は自動でスケジューラをリロードする。",
     {
       action: z
         .enum(["add", "update", "remove", "toggle"])
@@ -46,9 +52,12 @@ export function registerScheduleTools(server: McpServer) {
             };
             schedules.push(entry);
             writeJsonStore(SCHEDULE_FILE, schedules);
+            // スケジューラをリロード
+            const reloaded = reloadSchedules();
             return createSuccessResponse({
               status: "added",
               schedule: entry,
+              scheduler: reloaded,
             });
           }
 
@@ -66,9 +75,11 @@ export function registerScheduleTools(server: McpServer) {
             if (params !== undefined) schedules[idx].params = params;
             if (description !== undefined) schedules[idx].description = description;
             writeJsonStore(SCHEDULE_FILE, schedules);
+            const reloaded = reloadSchedules();
             return createSuccessResponse({
               status: "updated",
               schedule: schedules[idx],
+              scheduler: reloaded,
             });
           }
 
@@ -82,9 +93,11 @@ export function registerScheduleTools(server: McpServer) {
             }
             const removed = schedules.splice(removeIdx, 1)[0];
             writeJsonStore(SCHEDULE_FILE, schedules);
+            const reloaded = reloadSchedules();
             return createSuccessResponse({
               status: "removed",
               removedSchedule: removed,
+              scheduler: reloaded,
             });
           }
 
@@ -98,9 +111,11 @@ export function registerScheduleTools(server: McpServer) {
             }
             schedules[toggleIdx].enabled = !schedules[toggleIdx].enabled;
             writeJsonStore(SCHEDULE_FILE, schedules);
+            const reloaded = reloadSchedules();
             return createSuccessResponse({
               status: "toggled",
               schedule: schedules[toggleIdx],
+              scheduler: reloaded,
             });
           }
         }
@@ -114,13 +129,14 @@ export function registerScheduleTools(server: McpServer) {
   // --- get-schedule ---
   server.tool(
     "get-schedule",
-    "現在のスケジュール設定と概要を取得する。",
+    "現在のスケジュール設定とスケジューラの稼働状態を取得する。",
     {},
     async () => {
       try {
         const schedules = readJsonStore<ScheduleEntry[]>(SCHEDULE_FILE, []);
         const enabled = schedules.filter((s) => s.enabled);
         const disabled = schedules.filter((s) => !s.enabled);
+        const status = getSchedulerStatus();
 
         return createSuccessResponse({
           schedules,
@@ -129,6 +145,7 @@ export function registerScheduleTools(server: McpServer) {
             enabledCount: enabled.length,
             disabledCount: disabled.length,
           },
+          scheduler: status,
         });
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);
@@ -137,114 +154,42 @@ export function registerScheduleTools(server: McpServer) {
     }
   );
 
-  // --- export-n8n-workflow ---
+  // --- start-scheduler ---
   server.tool(
-    "export-n8n-workflow",
-    "スケジュール設定からn8nインポート用のワークフローJSONを生成する。n8nにインポートするだけで自動運用を開始できる。",
-    {
-      mcpUrl: z
-        .string()
-        .default("http://localhost:3000/mcp")
-        .describe("MCPサーバーのURL"),
-    },
-    async ({ mcpUrl }) => {
+    "start-scheduler",
+    "内蔵スケジューラを起動する。schedule-config.jsonの有効なスケジュールに基づいてcronジョブを開始する。HTTPモードで起動している必要がある。",
+    {},
+    async () => {
       try {
-        const schedules = readJsonStore<ScheduleEntry[]>(SCHEDULE_FILE, []);
-        const enabled = schedules.filter((s) => s.enabled);
-
-        if (enabled.length === 0) {
-          return createSuccessResponse({
-            status: "no_schedules",
-            message:
-              "有効なスケジュールがありません。manage-scheduleでスケジュールを追加してください。",
-          });
-        }
-
-        // n8nワークフロー生成
-        const workflows = enabled.map((schedule) => {
-          const workflowId = randomUUID();
-
-          // JSON-RPC リクエストボディ
-          const rpcBody = {
-            jsonrpc: "2.0",
-            id: 1,
-            method: "tools/call",
-            params: {
-              name: schedule.workflow,
-              arguments: schedule.params,
-            },
-          };
-
-          return {
-            name: `note-mcp: ${schedule.name}`,
-            nodes: [
-              {
-                parameters: {
-                  rule: {
-                    interval: [{ expression: schedule.cron }],
-                  },
-                },
-                id: randomUUID(),
-                name: "Cron Trigger",
-                type: "n8n-nodes-base.scheduleTrigger",
-                typeVersion: 1.2,
-                position: [250, 300],
-              },
-              {
-                parameters: {
-                  method: "POST",
-                  url: mcpUrl,
-                  sendHeaders: true,
-                  headerParameters: {
-                    parameters: [
-                      { name: "Content-Type", value: "application/json" },
-                    ],
-                  },
-                  sendBody: true,
-                  specifyBody: "json",
-                  jsonBody: JSON.stringify(rpcBody),
-                },
-                id: randomUUID(),
-                name: `Execute: ${schedule.workflow}`,
-                type: "n8n-nodes-base.httpRequest",
-                typeVersion: 4.2,
-                position: [500, 300],
-              },
-            ],
-            connections: {
-              "Cron Trigger": {
-                main: [[{ node: `Execute: ${schedule.workflow}`, type: "main", index: 0 }]],
-              },
-            },
-            settings: {
-              executionOrder: "v1",
-            },
-            meta: {
-              templateId: workflowId,
-              description: schedule.description,
-              generated: true,
-              generatedAt: new Date().toISOString(),
-              source: "note-mcp-server/export-n8n-workflow",
-            },
-          };
-        });
-
+        const result = startAllSchedules();
+        const status = getSchedulerStatus();
         return createSuccessResponse({
-          status: "generated",
-          workflowCount: workflows.length,
-          mcpUrl,
-          workflows,
-          importInstructions: [
-            "1. n8nを開き、左メニューから「Workflows」を選択",
-            "2. 右上の「...」→「Import from JSON」をクリック",
-            "3. 上記のworkflowsの各要素を個別にペーストしてインポート",
-            "4. 各ワークフローをアクティベート（トグルON）",
-            "5. MCPサーバーがHTTPモードで起動していることを確認",
-          ],
+          status: "started",
+          ...result,
+          scheduler: status,
         });
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);
-        return createErrorResponse(`n8nワークフロー生成に失敗しました: ${message}`);
+        return createErrorResponse(`スケジューラの起動に失敗しました: ${message}`);
+      }
+    }
+  );
+
+  // --- stop-scheduler ---
+  server.tool(
+    "stop-scheduler",
+    "内蔵スケジューラを停止する。全てのcronジョブを停止する。",
+    {},
+    async () => {
+      try {
+        const stopped = stopAllSchedules();
+        return createSuccessResponse({
+          status: "stopped",
+          stoppedJobs: stopped,
+        });
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        return createErrorResponse(`スケジューラの停止に失敗しました: ${message}`);
       }
     }
   );

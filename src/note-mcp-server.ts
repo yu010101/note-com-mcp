@@ -34,6 +34,7 @@ import { registerScheduleTools } from "./tools/schedule-tools.js";
 import { registerFeedbackTools } from "./tools/feedback-tools.js";
 import { registerPromotionTools } from "./tools/promotion-tools.js";
 import { registerRevenueTools } from "./tools/revenue-tools.js";
+import { setMcpBaseUrl, startAllSchedules, stopAllSchedules } from "./utils/scheduler.js";
 
 // ESMでの__dirnameの代替
 const __filename = fileURLToPath(import.meta.url);
@@ -2802,11 +2803,19 @@ async function main() {
           `note API MCP Server is running on HTTP transport at http://${HOST}:${PORT}/mcp`,
         );
         showAuthStatus();
+
+        // 内蔵スケジューラを起動
+        setMcpBaseUrl(`http://${HOST}:${PORT}`);
+        const schedResult = startAllSchedules();
+        if (schedResult.started > 0) {
+          console.error(`✅ スケジューラ起動: ${schedResult.started}件のジョブを開始`);
+        }
       });
 
       // グレースフルシャットダウン
       const shutdown = async () => {
         console.error("Shutting down HTTP server...");
+        stopAllSchedules();
         for (const sid of Object.keys(transports)) {
           try {
             await transports[sid].close();
