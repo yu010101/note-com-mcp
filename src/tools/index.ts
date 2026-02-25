@@ -16,6 +16,9 @@ import { registerCalendarTools } from "./calendar-tools.js";
 import { registerWorkflowTools } from "./workflow-tools.js";
 import { registerMemoryTools } from "./memory-tools.js";
 import { registerPdcaTools } from "./pdca-tools.js";
+import { registerAutonomousTools } from "./autonomous-tools.js";
+import { registerScheduleTools } from "./schedule-tools.js";
+import { registerFeedbackTools } from "./feedback-tools.js";
 
 /**
  * すべてのツールをMCPサーバーに登録する
@@ -44,4 +47,9 @@ export function registerAllTools(server: McpServer): void {
   // 記憶・PDCAサイクル
   registerMemoryTools(server);
   registerPdcaTools(server);
+
+  // 自律実行エンジン
+  registerAutonomousTools(server);
+  registerScheduleTools(server);
+  registerFeedbackTools(server);
 }

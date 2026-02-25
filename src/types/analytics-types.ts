@@ -112,3 +112,15 @@ export interface PDCACycleEntry {
   actItems: string[];
   completedAt: string;
 }
+
+export interface ScheduleEntry {
+  id: string;
+  name: string;
+  cron: string;
+  workflow: string;
+  params: Record<string, unknown>;
+  enabled: boolean;
+  description: string;
+  lastRun?: string;
+  createdAt: string;
+}

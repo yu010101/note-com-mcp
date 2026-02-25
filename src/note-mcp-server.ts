@@ -29,6 +29,9 @@ import { registerCalendarTools } from "./tools/calendar-tools.js";
 import { registerWorkflowTools } from "./tools/workflow-tools.js";
 import { registerMemoryTools } from "./tools/memory-tools.js";
 import { registerPdcaTools } from "./tools/pdca-tools.js";
+import { registerAutonomousTools } from "./tools/autonomous-tools.js";
+import { registerScheduleTools } from "./tools/schedule-tools.js";
+import { registerFeedbackTools } from "./tools/feedback-tools.js";
 
 // ESMでの__dirnameの代替
 const __filename = fileURLToPath(import.meta.url);
@@ -3978,6 +3981,9 @@ registerCalendarTools(server);
 registerWorkflowTools(server);
 registerMemoryTools(server);
 registerPdcaTools(server);
+registerAutonomousTools(server);
+registerScheduleTools(server);
+registerFeedbackTools(server);
 
 main().catch((error) => {
   console.error("Fatal error:", error);

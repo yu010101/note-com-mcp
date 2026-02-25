@@ -184,4 +184,55 @@ export function registerPrompts(server: McpServer): void {
       ],
     })
   );
+
+  // 完全自律サイクルプロンプト
+  server.prompt(
+    "autonomous-cycle",
+    {},
+    () => ({
+      messages: [
+        {
+          role: "user",
+          content: {
+            type: "text",
+            text: `noteアカウントの完全自律サイクルを実行してください。
+
+以下の手順で進めてください：
+1. run-autonomous-cycleを実行して現状を把握
+2. 結果に基づいてauto-generate-articleでテーマ候補を生成
+3. 最も有望なテーマでcreate-draft（下書き作成）を提案
+4. run-feedback-loopで次回への学びを記録
+5. 結果のサマリーをsend-reportで通知
+
+データ駆動で判断し、各ステップの結果を踏まえて次のアクションを決定してください。`,
+          },
+        },
+      ],
+    })
+  );
+
+  // 日次ルーティンプロンプト
+  server.prompt(
+    "daily-routine",
+    {},
+    () => ({
+      messages: [
+        {
+          role: "user",
+          content: {
+            type: "text",
+            text: `noteアカウントの日次ルーティンを実行してください。
+
+以下の手順で進めてください：
+1. run-autonomous-cycle period=week で現状把握
+2. 下書きがあればrun-content-workflow workflow=publish-readiness でチェック
+3. run-feedback-loopで今日のアクションを決定
+4. 結果をsend-reportで通知
+
+簡潔なダッシュボード形式で結果をまとめてください。`,
+          },
+        },
+      ],
+    })
+  );
 }
