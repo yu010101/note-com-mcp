@@ -7,9 +7,10 @@ import { readEditorialVoice } from "../utils/voice-reader.js";
 import { fetchAllStats, computeTrends, categorizeArticles } from "../utils/analytics-helpers.js";
 import { noteApiRequest } from "../utils/api-client.js";
 import { env } from "../config/environment.js";
-import { MemoryEntry, WorkflowStepResult } from "../types/analytics-types.js";
+import { MemoryEntry, PDCACycleEntry, WorkflowStepResult } from "../types/analytics-types.js";
 
 const MEMORY_FILE = "memory-data.json";
+const PDCA_FILE = "pdca-history.json";
 
 export function registerRevenueTools(server: McpServer) {
   // --- analyze-revenue ---
@@ -301,6 +302,154 @@ export function registerRevenueTools(server: McpServer) {
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);
         return createErrorResponse(`マネタイズワークフローに失敗しました: ${message}`);
+      }
+    }
+  );
+
+  // --- dashboard-summary ---
+  server.tool(
+    "dashboard-summary",
+    "noteアカウントの統合ダッシュボード。PV推移・成長率・トレンド記事・SNS状況・PDCA進捗・記憶数をまとめて1画面で確認。",
+    {},
+    async () => {
+      try {
+        // PVデータ取得
+        const [weekly, monthly, all] = await Promise.all([
+          fetchAllStats("week"),
+          fetchAllStats("month"),
+          fetchAllStats("all"),
+        ]);
+
+        const weeklyTotalPV = weekly.reduce((s, n) => s + n.readCount, 0);
+        const monthlyTotalPV = monthly.reduce((s, n) => s + n.readCount, 0);
+        const allTotalPV = all.reduce((s, n) => s + n.readCount, 0);
+
+        // トレンド分析
+        const weeklyMap = new Map(weekly.map((s) => [s.noteId, s.readCount]));
+        const monthlyMap = new Map(monthly.map((s) => [s.noteId, s.readCount]));
+        const allMap = new Map(
+          all.map((s) => [s.noteId, { title: s.title, key: s.key, user: s.user, readCount: s.readCount }])
+        );
+        const trends = computeTrends(weeklyMap, monthlyMap, allMap);
+        const { topArticles, risingArticles, decliningArticles } = categorizeArticles(trends, 5);
+
+        // 記事数・有料/無料内訳
+        let totalArticles = 0;
+        let paidCount = 0;
+        let freeCount = 0;
+        let followerCount: number | null = null;
+        try {
+          const userArticles = await noteApiRequest(
+            `/v2/creators/${encodeURIComponent(env.NOTE_USER_ID)}/contents?kind=note&page=1`,
+          );
+          const contents = userArticles?.data?.contents || [];
+          totalArticles = userArticles?.data?.totalCount ?? contents.length;
+          if (Array.isArray(contents)) {
+            for (const c of contents) {
+              if (c.price && c.price > 0) paidCount++;
+              else freeCount++;
+            }
+          }
+        } catch { /* 無視 */ }
+
+        // フォロワー数
+        try {
+          const userData = await noteApiRequest(
+            `/v2/creators/${encodeURIComponent(env.NOTE_USER_ID)}`,
+          );
+          followerCount = userData?.data?.followerCount ?? null;
+        } catch { /* 無視 */ }
+
+        // PDCA履歴
+        const pdcaHistory = readJsonStore<PDCACycleEntry[]>(PDCA_FILE, []);
+        const latestPdca = pdcaHistory.length > 0 ? pdcaHistory[pdcaHistory.length - 1] : null;
+
+        // 記憶統計
+        const memories = readJsonStore<MemoryEntry[]>(MEMORY_FILE, []);
+        const recentMemories = memories.slice(-5);
+        const crossPostSuccesses = memories.filter(
+          (m) => m.tags.includes("cross-post") && m.tags.includes("success")
+        ).length;
+
+        // 成長率計算（週間PV÷月間PV×4 で月間ペースを推定）
+        const weeklyPace = weeklyTotalPV * 4;
+        const growthRate =
+          monthlyTotalPV > 0
+            ? Math.round(((weeklyPace - monthlyTotalPV) / monthlyTotalPV) * 100)
+            : 0;
+
+        // SNS設定状況
+        const snsStatus = {
+          twitter: Boolean(env.TWITTER_API_KEY && env.TWITTER_ACCESS_TOKEN),
+          threads: Boolean(env.THREADS_ACCESS_TOKEN && env.THREADS_USER_ID),
+          webhook: Boolean(env.SNS_WEBHOOK_URL || env.WEBHOOK_URL),
+        };
+
+        return createSuccessResponse({
+          generatedAt: new Date().toISOString(),
+          account: {
+            userId: env.NOTE_USER_ID,
+            totalArticles,
+            paidArticles: paidCount,
+            freeArticles: freeCount,
+            followerCount,
+          },
+          pvSummary: {
+            weekly: weeklyTotalPV,
+            monthly: monthlyTotalPV,
+            allTime: allTotalPV,
+            weeklyGrowthRate: `${growthRate > 0 ? "+" : ""}${growthRate}%`,
+            avgPVPerArticle: totalArticles > 0 ? Math.round(allTotalPV / totalArticles) : 0,
+          },
+          trendingArticles: {
+            rising: risingArticles.slice(0, 3).map((a) => ({
+              title: a.title,
+              weeklyPV: a.weeklyPV,
+              url: a.url,
+            })),
+            top: topArticles.slice(0, 3).map((a) => ({
+              title: a.title,
+              totalPV: a.totalPV,
+              url: a.url,
+            })),
+            declining: decliningArticles.slice(0, 3).map((a) => ({
+              title: a.title,
+              weeklyPV: a.weeklyPV,
+              url: a.url,
+            })),
+          },
+          pdca: latestPdca
+            ? {
+                lastCycleDate: latestPdca.completedAt,
+                period: latestPdca.period,
+                actItems: latestPdca.actItems,
+                totalCycles: pdcaHistory.length,
+              }
+            : { message: "PDCAサイクル未実施", totalCycles: 0 },
+          memory: {
+            totalEntries: memories.length,
+            recentInsights: recentMemories
+              .filter((m) => m.type === "insight")
+              .map((m) => m.content)
+              .slice(0, 3),
+            crossPostSuccesses,
+          },
+          snsStatus,
+          quickActions: [
+            risingArticles.length > 0
+              ? `「${risingArticles[0].title}」をSNSで拡散（上昇トレンド）`
+              : "新しい記事を作成して公開する",
+            latestPdca
+              ? "compare-pdca-cyclesで前回との比較を確認"
+              : "record-pdca-cycleで初回PDCAサイクルを記録",
+            growthRate < 0
+              ? "run-feedback-loopでPV低下の原因を分析"
+              : "auto-generate-articleでデータ駆動のテーマ生成",
+          ],
+        });
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        return createErrorResponse(`ダッシュボード生成に失敗しました: ${message}`);
       }
     }
   );

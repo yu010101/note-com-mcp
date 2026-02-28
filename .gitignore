@@ -79,10 +79,16 @@ XSERVER_DEPLOY.md
 # 編集方針設定（ユーザー固有）
 editorial-voice.json
 
+# X運用戦略データ（ユーザー固有）
+x-strategy.json
+
 # 記憶・PDCA履歴・スケジュールデータ（セッション固有）
 memory-data.json
 pdca-history.json
 schedule-config.json
+agent-log.json
+agent-goal.json
+post-log.json
 
 # テストファイル
 linebreak-test.md

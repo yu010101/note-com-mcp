@@ -2,6 +2,7 @@ import cron from "node-cron";
 import fetch from "node-fetch";
 import { readJsonStore, writeJsonStore } from "./memory-store.js";
 import { ScheduleEntry } from "../types/analytics-types.js";
+import { runAgentCycle } from "./agent-runner.js";
 
 const SCHEDULE_FILE = "schedule-config.json";
 
@@ -19,40 +20,63 @@ export function setMcpBaseUrl(url: string): void {
 
 /**
  * スケジュールに基づいてMCPツールを内部呼び出し
+ * agentMode が設定されている場合は Claude CLI エージェント経由で実行
  */
 async function executeScheduledTool(schedule: ScheduleEntry): Promise<void> {
-  const url = `${mcpBaseUrl}/mcp`;
-  const rpcBody = {
-    jsonrpc: "2.0",
-    id: Date.now(),
-    method: "tools/call",
-    params: {
-      name: schedule.workflow,
-      arguments: schedule.params,
-    },
-  };
-
-  try {
-    const response = await fetch(url, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(rpcBody),
-    });
-
-    if (response.ok) {
+  if (schedule.agentMode) {
+    // エージェントモード: Claude CLI経由で自律実行
+    try {
+      const log = await runAgentCycle(schedule.agentMode);
+      if (log.success) {
+        console.error(
+          `[scheduler] ${schedule.name} (agent:${schedule.agentMode}) 実行成功 ($${log.costUsd.toFixed(2)}, ${log.durationMs}ms)`
+        );
+      } else {
+        console.error(
+          `[scheduler] ${schedule.name} (agent:${schedule.agentMode}) 実行失敗: ${log.error}`
+        );
+      }
+    } catch (error) {
       console.error(
-        `[scheduler] ${schedule.name} (${schedule.workflow}) 実行成功`
-      );
-    } else {
-      console.error(
-        `[scheduler] ${schedule.name} 実行失敗: HTTP ${response.status}`
+        `[scheduler] ${schedule.name} エージェント実行エラー:`,
+        error instanceof Error ? error.message : error
       );
     }
-  } catch (error) {
-    console.error(
-      `[scheduler] ${schedule.name} 実行エラー:`,
-      error instanceof Error ? error.message : error
-    );
+  } else {
+    // 従来モード: HTTP JSON-RPC呼び出し
+    const url = `${mcpBaseUrl}/mcp`;
+    const rpcBody = {
+      jsonrpc: "2.0",
+      id: Date.now(),
+      method: "tools/call",
+      params: {
+        name: schedule.workflow,
+        arguments: schedule.params,
+      },
+    };
+
+    try {
+      const response = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(rpcBody),
+      });
+
+      if (response.ok) {
+        console.error(
+          `[scheduler] ${schedule.name} (${schedule.workflow}) 実行成功`
+        );
+      } else {
+        console.error(
+          `[scheduler] ${schedule.name} 実行失敗: HTTP ${response.status}`
+        );
+      }
+    } catch (error) {
+      console.error(
+        `[scheduler] ${schedule.name} 実行エラー:`,
+        error instanceof Error ? error.message : error
+      );
+    }
   }
 
   // lastRunを更新

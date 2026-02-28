@@ -32,6 +32,18 @@ export interface Environment {
   TWITTER_ACCESS_SECRET: string;
   // SNS Webhook（Twitter以外のSNS中継用）
   SNS_WEBHOOK_URL: string;
+  // Threads API (Meta)
+  THREADS_ACCESS_TOKEN: string;
+  THREADS_USER_ID: string;
+  // Agent settings
+  AGENT_ENABLED: boolean;
+  AGENT_MODEL: string;
+  AGENT_MAX_BUDGET_USD: string;
+  AGENT_DAILY_BUDGET_USD: string;
+  CLAUDE_CLI_PATH: string;
+  // 投稿権限・頻度制御
+  AGENT_POST_MODE: "dry-run-only" | "full-auto";
+  AGENT_MAX_TWEETS_PER_DAY: number;
 }
 
 export const env: Environment = {
@@ -54,6 +66,17 @@ export const env: Environment = {
   TWITTER_ACCESS_TOKEN: process.env.TWITTER_ACCESS_TOKEN || "",
   TWITTER_ACCESS_SECRET: process.env.TWITTER_ACCESS_SECRET || "",
   SNS_WEBHOOK_URL: process.env.SNS_WEBHOOK_URL || "",
+  THREADS_ACCESS_TOKEN: process.env.THREADS_ACCESS_TOKEN || "",
+  THREADS_USER_ID: process.env.THREADS_USER_ID || "",
+  // Agent settings
+  AGENT_ENABLED: process.env.AGENT_ENABLED === "true",
+  AGENT_MODEL: process.env.AGENT_MODEL || "sonnet",
+  AGENT_MAX_BUDGET_USD: process.env.AGENT_MAX_BUDGET_USD || "0.50",
+  AGENT_DAILY_BUDGET_USD: process.env.AGENT_DAILY_BUDGET_USD || "5.00",
+  CLAUDE_CLI_PATH: process.env.CLAUDE_CLI_PATH || "claude",
+  // 投稿権限・頻度制御
+  AGENT_POST_MODE: (process.env.AGENT_POST_MODE === "full-auto" ? "full-auto" : "dry-run-only") as "dry-run-only" | "full-auto",
+  AGENT_MAX_TWEETS_PER_DAY: parseInt(process.env.AGENT_MAX_TWEETS_PER_DAY || "3", 10),
 };
 
 // 認証状態の判定

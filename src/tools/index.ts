@@ -21,6 +21,7 @@ import { registerScheduleTools } from "./schedule-tools.js";
 import { registerFeedbackTools } from "./feedback-tools.js";
 import { registerPromotionTools } from "./promotion-tools.js";
 import { registerRevenueTools } from "./revenue-tools.js";
+import { registerAgentTools } from "./agent-tools.js";
 
 /**
  * すべてのツールをMCPサーバーに登録する
@@ -36,7 +37,14 @@ export function registerAllTools(server: McpServer): void {
   registerImageTools(server);
   registerObsidianTools(server);
   registerPublishTools(server);
-  registerNotionTools(server);
+
+  // Notion tools（NOTION_TOKEN 未設定時はスキップ）
+  try {
+    registerNotionTools(server);
+  } catch (error) {
+    const msg = error instanceof Error ? error.message : String(error);
+    console.error(`[warning] Notion tools の登録をスキップしました: ${msg}`);
+  }
 
   // 自律エージェント機能
   registerAnalyticsTools(server);
@@ -58,4 +66,7 @@ export function registerAllTools(server: McpServer): void {
   // SNSクロスポスト・マネタイズ
   registerPromotionTools(server);
   registerRevenueTools(server);
+
+  // Claude CLI 自律エージェント
+  registerAgentTools(server);
 }

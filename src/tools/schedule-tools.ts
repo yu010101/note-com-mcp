@@ -3,7 +3,7 @@ import { randomUUID } from "crypto";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { createSuccessResponse, createErrorResponse } from "../utils/error-handler.js";
 import { readJsonStore, writeJsonStore } from "../utils/memory-store.js";
-import { ScheduleEntry } from "../types/analytics-types.js";
+import { ScheduleEntry, AgentMode } from "../types/analytics-types.js";
 import {
   startAllSchedules,
   stopAllSchedules,
@@ -28,27 +28,32 @@ export function registerScheduleTools(server: McpServer) {
       workflow: z.string().optional().describe("実行するツール/ワークフロー名"),
       params: z.record(z.unknown()).optional().describe("ツールに渡すパラメータ"),
       description: z.string().optional().describe("説明"),
+      agentMode: z
+        .enum(["morning-check", "content-creation", "promotion", "pdca-review", "full-auto"])
+        .optional()
+        .describe("エージェントモード（設定時はClaude CLI経由で自律実行）"),
     },
-    async ({ action, id, name, cron, workflow, params, description }) => {
+    async ({ action, id, name, cron, workflow, params, description, agentMode }) => {
       try {
         const schedules = readJsonStore<ScheduleEntry[]>(SCHEDULE_FILE, []);
 
         switch (action) {
           case "add": {
-            if (!name || !cron || !workflow) {
+            if (!name || !cron || (!workflow && !agentMode)) {
               return createErrorResponse(
-                "add操作にはname, cron, workflowが必須です。"
+                "add操作にはname, cronが必須です。workflowまたはagentModeのいずれかを指定してください。"
               );
             }
             const entry: ScheduleEntry = {
               id: randomUUID(),
               name,
               cron,
-              workflow,
+              workflow: workflow ?? `agent:${agentMode}`,
               params: params ?? {},
               enabled: true,
               description: description ?? "",
               createdAt: new Date().toISOString(),
+              agentMode: agentMode as AgentMode | undefined,
             };
             schedules.push(entry);
             writeJsonStore(SCHEDULE_FILE, schedules);
@@ -74,6 +79,7 @@ export function registerScheduleTools(server: McpServer) {
             if (workflow !== undefined) schedules[idx].workflow = workflow;
             if (params !== undefined) schedules[idx].params = params;
             if (description !== undefined) schedules[idx].description = description;
+            if (agentMode !== undefined) schedules[idx].agentMode = agentMode as AgentMode;
             writeJsonStore(SCHEDULE_FILE, schedules);
             const reloaded = reloadSchedules();
             return createSuccessResponse({
