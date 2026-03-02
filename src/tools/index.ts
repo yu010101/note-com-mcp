@@ -22,6 +22,7 @@ import { registerFeedbackTools } from "./feedback-tools.js";
 import { registerPromotionTools } from "./promotion-tools.js";
 import { registerRevenueTools } from "./revenue-tools.js";
 import { registerAgentTools } from "./agent-tools.js";
+import { registerXEngagementTools } from "./x-engagement-tools.js";
 
 /**
  * すべてのツールをMCPサーバーに登録する
@@ -69,4 +70,7 @@ export function registerAllTools(server: McpServer): void {
 
   // Claude CLI 自律エージェント
   registerAgentTools(server);
+
+  // Xエンゲージメント（アウトバウンド）
+  registerXEngagementTools(server);
 }

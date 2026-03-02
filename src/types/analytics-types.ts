@@ -126,6 +126,39 @@ export interface ScheduleEntry {
   agentMode?: AgentMode;
 }
 
+// --- インタラクション記録 ---
+export interface InteractionEntry {
+  id: string;
+  timestamp: string;
+  username: string;
+  tweetId: string;
+  action: "like" | "reply" | "follow" | "quote";
+  context?: string;       // リプライ内容、引用テキスト等
+  source: string;         // "outbound" | "manual"
+}
+
+// --- フォーマット別成績 ---
+export interface FormatStats {
+  formatName: string;
+  totalPosts: number;
+  totalLikes: number;
+  totalRetweets: number;
+  totalReplies: number;
+  totalImpressions: number;
+  avgEngagementRate: number;
+  lastUsed: string;
+  status: "active" | "boosted" | "deprecated";
+}
+
+// --- アウトバウンドターゲット ---
+export interface OutboundTarget {
+  tweetId: string;
+  username: string;
+  text: string;
+  metrics?: { likes: number; retweets: number; replies: number };
+  relevanceScore?: number;
+}
+
 // --- エージェントモード ---
 export type AgentMode =
   | "morning-check"        // 朝のPV確認 + 通知
@@ -133,6 +166,7 @@ export type AgentMode =
   | "promotion"            // SNS宣伝テキスト生成 + 投稿
   | "pdca-review"          // 週次/月次PDCA振り返り
   | "engagement-check"     // 投稿のエンゲージメント確認
+  | "outbound"             // アウトバウンドエンゲージメント
   | "full-auto";           // 上記すべてを状況に応じて実行
 
 // --- エージェント目標 ---

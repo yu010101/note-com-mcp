@@ -192,6 +192,20 @@ export function buildSystemPrompt(mode: AgentMode): string {
       "5. 改善アクションを提案して報告",
     ].join("\n"),
 
+    outbound: [
+      "## タスク: アウトバウンドエンゲージメント",
+      "0. `get-x-strategy` でX運用戦略を確認",
+      "1. `search-tweets` で注力トピック関連のツイートを検索",
+      "2. 関連性の高いツイートを選定（フォロワー数・内容の質で判断）",
+      "3. `like-tweet` でいいね（1セッション最大5件）",
+      "4. 価値あるリプライができる場合のみ `reply-to-tweet` でリプライ",
+      "5. 特に親和性の高いアカウントには `follow-user` でフォロー",
+      "6. 実行結果を `record-memory` で記録",
+      "7. 結果をまとめて報告",
+      "",
+      "**重要: スパム的な大量エンゲージメントは禁止。質を重視。**",
+    ].join("\n"),
+
     "full-auto": env.AGENT_POST_MODE === "full-auto"
       ? [
           "## タスク: 完全自律実行（自動投稿モード）",
@@ -206,6 +220,7 @@ export function buildSystemPrompt(mode: AgentMode): string {
           "   - 下降トレンド記事が多い → リライト・改善を提案",
           "   - 定期振り返り時期 → PDCA分析を実行",
           "   - SNS投稿残数がある → `cross-post` で実投稿（dryRun: false）",
+          "   - アウトバウンドが有効 → `search-tweets` でターゲット発見 → `like-tweet` / `reply-to-tweet` / `follow-user`",
           "4. 実行した内容を `record-memory` で記録",
           "5. 結果をまとめて報告",
           "",
@@ -222,6 +237,7 @@ export function buildSystemPrompt(mode: AgentMode): string {
           "   - 上昇トレンド記事がある → 横展開テーマを提案",
           "   - 下降トレンド記事が多い → リライト・改善を提案",
           "   - 定期振り返り時期 → PDCA分析を実行",
+          "   - アウトバウンドが有効 → `search-tweets` でターゲット発見 → `like-tweet` / `reply-to-tweet` / `follow-user`",
           "3. 実行した内容を `record-memory` で記録",
           "4. 結果をまとめて報告",
           "",

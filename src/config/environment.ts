@@ -44,6 +44,9 @@ export interface Environment {
   // 投稿権限・頻度制御
   AGENT_POST_MODE: "dry-run-only" | "full-auto";
   AGENT_MAX_TWEETS_PER_DAY: number;
+  // アウトバウンドエンゲージメント上限
+  AGENT_MAX_LIKES_PER_DAY: number;
+  AGENT_MAX_FOLLOWS_PER_DAY: number;
 }
 
 export const env: Environment = {
@@ -77,6 +80,9 @@ export const env: Environment = {
   // 投稿権限・頻度制御
   AGENT_POST_MODE: (process.env.AGENT_POST_MODE === "full-auto" ? "full-auto" : "dry-run-only") as "dry-run-only" | "full-auto",
   AGENT_MAX_TWEETS_PER_DAY: parseInt(process.env.AGENT_MAX_TWEETS_PER_DAY || "3", 10),
+  // アウトバウンドエンゲージメント上限
+  AGENT_MAX_LIKES_PER_DAY: parseInt(process.env.AGENT_MAX_LIKES_PER_DAY || "20", 10),
+  AGENT_MAX_FOLLOWS_PER_DAY: parseInt(process.env.AGENT_MAX_FOLLOWS_PER_DAY || "5", 10),
 };
 
 // 認証状態の判定

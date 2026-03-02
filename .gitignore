@@ -89,6 +89,8 @@ schedule-config.json
 agent-log.json
 agent-goal.json
 post-log.json
+interaction-log.json
+format-stats.json
 
 # テストファイル
 linebreak-test.md
