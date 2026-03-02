@@ -29,7 +29,7 @@ export function registerScheduleTools(server: McpServer) {
       params: z.record(z.unknown()).optional().describe("ツールに渡すパラメータ"),
       description: z.string().optional().describe("説明"),
       agentMode: z
-        .enum(["morning-check", "content-creation", "promotion", "pdca-review", "full-auto"])
+        .enum(["morning-check", "content-creation", "promotion", "pdca-review", "engagement-check", "outbound", "full-auto"])
         .optional()
         .describe("エージェントモード（設定時はClaude CLI経由で自律実行）"),
     },

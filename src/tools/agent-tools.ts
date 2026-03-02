@@ -27,6 +27,7 @@ const agentModeEnum = z.enum([
   "promotion",
   "pdca-review",
   "engagement-check",
+  "outbound",
   "full-auto",
 ]);
 
